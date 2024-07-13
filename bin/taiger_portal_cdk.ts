@@ -20,3 +20,4 @@ new TaiGerPortalCdkStack(app, `TaiGerPortalCdkStack-${Stage.Beta_FE}`, {
 
   /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
 });
+app.synth();

@@ -1,16 +1,129 @@
-import * as cdk from 'aws-cdk-lib';
+import {
+  Stack,
+  StackProps,
+  // Duration,
+  RemovalPolicy,
+  SecretValue,
+} from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import * as sqs from 'aws-cdk-lib/aws-sqs';
+// import * as sqs from 'aws-cdk-lib/aws-sqs';
+import * as codebuild from 'aws-cdk-lib/aws-codebuild';
+import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
+import * as codepipeline_actions from 'aws-cdk-lib/aws-codepipeline-actions';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as iam from 'aws-cdk-lib/aws-iam';
 
-export class TaiGerPortalCdkStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+export class TaiGerPortalCdkStack extends Stack {
+  constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
     // The code that defines your stack goes here
 
     // example resource
-    const queue = new sqs.Queue(this, 'TaiGerPortalCdkQueue', {
-      visibilityTimeout: cdk.Duration.seconds(300)
+    // const queue = new sqs.Queue(this, 'TaiGerPortalCdkQueue', {
+    //   visibilityTimeout: Duration.seconds(300)
+    // });
+
+    // Reference existing S3 bucket
+    const existingBucketName = 'taiger-file-storage-development-website';
+    const existingBucket = s3.Bucket.fromBucketName(
+      this,
+      'ExistingBucket',
+      existingBucketName
+    );
+
+    // const prodBucket = new s3.Bucket(this, 'ProdBucket', {
+    //   bucketName: 'taiger-file-storage-production-website',
+    //   versioned: false,
+    // });
+
+    // CodePipeline Artifact
+    const sourceOutput = new codepipeline.Artifact();
+
+    // GitHub source action
+    const sourceAction = new codepipeline_actions.GitHubSourceAction({
+      actionName: 'Hello-World',
+      owner: 'LIYUNG', // Replace with your GitHub username
+      repo: 'React-Hello-World', // Replace with your GitHub repo name
+      // oauthToken: SecretValue.secretsManager('GITHUB_TOKEN_NAME'), // GitHub token stored in AWS Secrets Manager
+      oauthToken: SecretValue.secretsManager(
+        'arn:aws:secretsmanager:us-east-1:669131042313:secret:beta/taigerportal-Hm1SLX'
+      ), // GitHub token stored in AWS Secrets Manager
+      output: sourceOutput,
+      branch: 'main', // Replace with your branch name
+      trigger: codepipeline_actions.GitHubTrigger.WEBHOOK,
+    });
+
+    // CodeBuild project
+    const buildProject = new codebuild.PipelineProject(this, 'BuildProject', {
+      buildSpec: codebuild.BuildSpec.fromObject({
+        version: '0.2',
+        phases: {
+          install: {
+            runtimeVersions: {
+              nodejs: '18',
+            },
+            commands: ['npm install'],
+          },
+          build: {
+            commands: ['npm run build'],
+          },
+        },
+        artifacts: {
+          files: [
+            'public/**/*',
+            'src/**/*',
+            'package.json',
+            'appspec.yml',
+            'scripts/**/*',
+          ],
+        },
+      }),
+    });
+
+    // Build action
+    const buildAction = new codepipeline_actions.CodeBuildAction({
+      actionName: 'Build',
+      project: buildProject,
+      input: sourceOutput,
+      outputs: [new codepipeline.Artifact()],
+    });
+
+    // Deploy to Beta
+    const betaDeployAction = new codepipeline_actions.S3DeployAction({
+      actionName: 'Beta_Deploy',
+      bucket: existingBucket,
+      input: buildAction?.actionProperties?.outputs![0],
+    });
+
+    // // Deploy to Prod
+    // const prodDeployAction = new codepipeline_actions.S3DeployAction({
+    //   actionName: 'Prod_Deploy',
+    //   bucket: prodBucket,
+    //   input: buildAction.actionProperties.outputs[0],
+    // });
+
+    // Define the pipeline
+    new codepipeline.Pipeline(this, 'Pipeline', {
+      stages: [
+        {
+          stageName: 'Source',
+          actions: [sourceAction],
+        },
+        {
+          stageName: 'Build',
+          actions: [buildAction],
+        },
+        {
+          stageName: 'Beta_Deploy',
+          actions: [betaDeployAction],
+        },
+        // {
+        //   stageName: 'Prod_Deploy',
+        //   actions: [prodDeployAction],
+        // },
+      ],
     });
   }
 }
