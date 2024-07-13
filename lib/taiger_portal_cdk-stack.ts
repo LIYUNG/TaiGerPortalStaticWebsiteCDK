@@ -57,6 +57,9 @@ export class TaiGerPortalCdkStack extends Stack {
 
     // CodeBuild project
     const buildProject = new codebuild.PipelineProject(this, 'BuildProject', {
+      environment: {
+        buildImage: codebuild.LinuxBuildImage.AMAZON_LINUX_2_4,
+      },
       buildSpec: codebuild.BuildSpec.fromObject({
         version: '0.2',
         phases: {
@@ -64,6 +67,8 @@ export class TaiGerPortalCdkStack extends Stack {
             runtimeVersions: {
               nodejs: '18',
             },
+          },
+          pre_build: {
             commands: ['npm install'],
           },
           build: {
@@ -71,13 +76,8 @@ export class TaiGerPortalCdkStack extends Stack {
           },
         },
         artifacts: {
-          files: [
-            'public/**/*',
-            'src/**/*',
-            'package.json',
-            'appspec.yml',
-            'scripts/**/*',
-          ],
+          'base-directory': 'build', // specify the base directory where build artifacts are located
+          files: ['**/*'], // include all files and subdirectories under 'build'
         },
       }),
     });
