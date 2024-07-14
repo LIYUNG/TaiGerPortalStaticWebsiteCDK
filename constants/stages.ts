@@ -13,6 +13,7 @@ export const STAGES = [
         account: AWS_ACCOUNT,
         bucket: AWS_S3_BUCKET_DEV_FRONTEND,
         cloudfrontId: CLOUDFRONT_ID_DEV,
+        isProd: false,
         apiDomain: API_BETA_DOMAIN
     }
     // {
@@ -21,6 +22,7 @@ export const STAGES = [
     //     account: AWS_ACCOUNT,
     //     bucket: AWS_S3_BUCKET_PROD_FRONTEND,
     //     cloudfrontId: CLOUDFRONT_ID_PROD,
+    //     isProd: true,
     //     apiDomain: API_PROD_DOMAIN
     // }
 ];

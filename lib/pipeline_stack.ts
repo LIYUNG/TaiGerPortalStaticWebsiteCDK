@@ -20,7 +20,8 @@ import {
     GITHUB_PACKAGE_BRANCH,
     GITHUB_REPO,
     GITHUB_TOKEN,
-    PIPELINE_NAME
+    PIPELINE_NAME,
+    TENANT_NAME
 } from "../configuration";
 
 export class MyPipelineStack extends Stack {
@@ -37,7 +38,7 @@ export class MyPipelineStack extends Stack {
 
         // GitHub source action
         const sourceAction = new codepipeline_actions.GitHubSourceAction({
-            actionName: "Hello-World",
+            actionName: TENANT_NAME,
             owner: GITHUB_OWNER,
             repo: GITHUB_REPO,
             oauthToken: SecretValue.secretsManager(GITHUB_TOKEN),
@@ -48,7 +49,7 @@ export class MyPipelineStack extends Stack {
 
         pipeline.addStage({ stageName: "Source", actions: [sourceAction] });
 
-        STAGES.forEach(({ stageName, account, bucket, apiDomain, cloudfrontId }) => {
+        STAGES.forEach(({ stageName, account, bucket, apiDomain, cloudfrontId, isProd }) => {
             // Reference existing S3 bucket
             const existingBucket = s3.Bucket.fromBucketName(
                 this,
@@ -62,7 +63,8 @@ export class MyPipelineStack extends Stack {
                     buildImage: codebuild.LinuxBuildImage.AMAZON_LINUX_2_4,
                     environmentVariables: {
                         REACT_APP_STAGE: { value: stageName },
-                        REACT_APP_PROD_URL: { value: apiDomain }
+                        REACT_APP_PROD_URL: { value: apiDomain },
+                        GENERATE_SOURCEMAP: { value: false }
                     }
                 },
                 buildSpec: codebuild.BuildSpec.fromObject({
@@ -71,15 +73,15 @@ export class MyPipelineStack extends Stack {
                         install: {
                             runtimeVersions: {
                                 nodejs: "18"
-                            },
-                            commands: ["npm install"]
+                            }
                         },
+                        pre_build: { commands: ["cd client", "npm install"] },
                         build: {
                             commands: ["npm run build"]
                         }
                     },
                     artifacts: {
-                        "base-directory": "build",
+                        "base-directory": "client/build",
                         files: ["**/*"]
                     }
                 })
@@ -141,11 +143,17 @@ export class MyPipelineStack extends Stack {
                 project: invalidateCacheProject,
                 input: sourceOutput
             });
-
+            if (isProd) {
+                // Add action to approval
+                pipeline.addStage({
+                    stageName: `Build-${stageName}`,
+                    actions: [approvalAction]
+                });
+            }
             // Add actions to pipeline stages
             pipeline.addStage({
                 stageName: `Build-${stageName}`,
-                actions: [buildAction, approvalAction]
+                actions: [buildAction]
             });
             pipeline.addStage({
                 stageName: `Deploy-${stageName}`,
