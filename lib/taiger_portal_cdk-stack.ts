@@ -59,6 +59,9 @@ export class TaiGerPortalCdkStack extends Stack {
     const buildProject = new codebuild.PipelineProject(this, 'BuildProject', {
       environment: {
         buildImage: codebuild.LinuxBuildImage.AMAZON_LINUX_2_4,
+        environmentVariables: {
+          REACT_APP_STAGE: { value: 'Beta' }, // Add your environment variables here
+        },
       },
       buildSpec: codebuild.BuildSpec.fromObject({
         version: '0.2',
