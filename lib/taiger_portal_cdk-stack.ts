@@ -14,6 +14,15 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 // import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from "aws-cdk-lib/aws-iam";
 import { Stage } from "../constants";
+import {
+  API_BETA_DOMAIN,
+    AWS_CODEPIPELINE_APPROVER_EMAIL,
+    AWS_S3_BUCKET_DEV_FRONTEND,
+    GITHUB_OWNER,
+    GITHUB_PACKAGE_BRANCH,
+    GITHUB_REPO,
+    GITHUB_TOKEN
+} from "../configuration";
 
 export class TaiGerPortalCdkStack extends Stack {
     constructor(scope: Construct, id: string, props?: StackProps) {
@@ -27,10 +36,10 @@ export class TaiGerPortalCdkStack extends Stack {
         // });
 
         // Reference existing S3 bucket
-        const existingBucketName = "taiger-file-storage-development-website";
+        const existingBucketName = AWS_S3_BUCKET_DEV_FRONTEND;
         const existingBucket = s3.Bucket.fromBucketName(this, "ExistingBucket", existingBucketName);
 
-        // const prodBucketName = "taiger-file-storage-development-website";
+        // const prodBucketName = AWS_S3_BUCKET_PROD_FRONTEND;
         // const prodBucket = s3.Bucket.fromBucketName(this, "ExistingBucket", prodBucketName);
 
         // CodePipeline Artifact
@@ -39,14 +48,12 @@ export class TaiGerPortalCdkStack extends Stack {
         // GitHub source action
         const sourceAction = new codepipeline_actions.GitHubSourceAction({
             actionName: "Hello-World",
-            owner: "LIYUNG", // Replace with your GitHub username
-            repo: "React-Hello-World", // Replace with your GitHub repo name
+            owner: GITHUB_OWNER, // Replace with your GitHub username
+            repo: GITHUB_REPO, // Replace with your GitHub repo name
             // oauthToken: SecretValue.secretsManager('GITHUB_TOKEN_NAME'), // GitHub token stored in AWS Secrets Manager
-            oauthToken: SecretValue.secretsManager(
-                "arn:aws:secretsmanager:us-east-1:669131042313:secret:beta/taigerportal-Hm1SLX"
-            ), // GitHub token stored in AWS Secrets Manager
+            oauthToken: SecretValue.secretsManager(GITHUB_TOKEN), // GitHub token stored in AWS Secrets Manager
             output: sourceOutput,
-            branch: "main", // Replace with your branch name
+            branch: GITHUB_PACKAGE_BRANCH, // Replace with your branch name
             trigger: codepipeline_actions.GitHubTrigger.WEBHOOK
         });
 
@@ -55,6 +62,7 @@ export class TaiGerPortalCdkStack extends Stack {
             stage: string;
             prodUrl: string;
         }
+
         const createBuildProject = (props: BuildProjectProps): codebuild.PipelineProject => {
             const { stage, prodUrl } = props;
 
@@ -89,12 +97,12 @@ export class TaiGerPortalCdkStack extends Stack {
 
         const buildBetaProject = createBuildProject({
             stage: Stage.Beta_FE,
-            prodUrl: "https://integ.taigerconsultancy-portal.com"
+            prodUrl: API_BETA_DOMAIN
         });
 
         // const buildProdProject = createBuildProject({
         //     stage: Stage.Prod_NA,
-        //     prodUrl: "https://integ.taigerconsultancy-portal.com"
+        //     prodUrl: API_PROD_DOMAIN
         // });
 
         // Build action
@@ -107,7 +115,7 @@ export class TaiGerPortalCdkStack extends Stack {
 
         const buildBetaApprovalAction = new codepipeline_actions.ManualApprovalAction({
             actionName: `Approval-${Stage.Beta_FE}`,
-            notifyEmails: ["taiger.leoc@gmail.com"] // Optional: Notify email addresses for approval
+            notifyEmails: [AWS_CODEPIPELINE_APPROVER_EMAIL] // Optional: Notify email addresses for approval
         });
 
         // const buildProdAction = new codepipeline_actions.CodeBuildAction({
@@ -119,7 +127,7 @@ export class TaiGerPortalCdkStack extends Stack {
 
         // const buildProdApprovalAction = new codepipeline_actions.ManualApprovalAction({
         //     actionName: `Approval-${Stage.Prod_NA}`,
-        //     notifyEmails: ["taiger.leoc@gmail.com"] // Optional: Notify email addresses for approval
+        //     notifyEmails: [AWS_CODEPIPELINE_APPROVER_EMAIL] // Optional: Notify email addresses for approval
         // });
 
         // CodeBuild project for CloudFront cache invalidation

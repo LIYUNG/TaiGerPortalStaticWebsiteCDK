@@ -3,6 +3,7 @@
 *.d.ts
 node_modules
 dist
+.eslintcache
 # CDK asset staging directory
 .cdk.staging
 cdk.out
