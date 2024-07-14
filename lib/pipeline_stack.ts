@@ -30,7 +30,8 @@ export class MyPipelineStack extends Stack {
 
         // Define the pipeline
         const pipeline = new codepipeline.Pipeline(this, "Pipeline", {
-            pipelineName: PIPELINE_NAME
+            pipelineName: PIPELINE_NAME,
+            restartExecutionOnUpdate: true
         });
 
         // CodePipeline Artifact
@@ -64,7 +65,8 @@ export class MyPipelineStack extends Stack {
                     environmentVariables: {
                         REACT_APP_STAGE: { value: stageName },
                         REACT_APP_PROD_URL: { value: apiDomain },
-                        GENERATE_SOURCEMAP: { value: false }
+                        GENERATE_SOURCEMAP: { value: false },
+                        CI: { value: "true" } // Setting the CI environment variable
                     }
                 },
                 buildSpec: codebuild.BuildSpec.fromObject({
@@ -77,7 +79,7 @@ export class MyPipelineStack extends Stack {
                         },
                         pre_build: { commands: ["cd client", "npm install"] },
                         build: {
-                            commands: ["npm run build"]
+                            commands: ["npm run test", "npm run build"]
                         }
                     },
                     artifacts: {
@@ -146,7 +148,7 @@ export class MyPipelineStack extends Stack {
             if (isProd) {
                 // Add action to approval
                 pipeline.addStage({
-                    stageName: `Build-${stageName}`,
+                    stageName: `Approval-${stageName}`,
                     actions: [approvalAction]
                 });
             }

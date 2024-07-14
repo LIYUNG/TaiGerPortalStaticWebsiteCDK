@@ -1,4 +1,9 @@
-import { API_BETA_DOMAIN, AWS_ACCOUNT, AWS_S3_BUCKET_DEV_FRONTEND, CLOUDFRONT_ID_DEV } from "../configuration";
+import {
+    API_BETA_DOMAIN,
+    AWS_ACCOUNT,
+    AWS_S3_BUCKET_DEV_FRONTEND,
+    CLOUDFRONT_ID_DEV
+} from "../configuration";
 import { Region } from "./regions";
 
 export enum Stage {
