@@ -13,6 +13,7 @@ import * as codepipeline_actions from "aws-cdk-lib/aws-codepipeline-actions";
 import * as s3 from "aws-cdk-lib/aws-s3";
 // import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from "aws-cdk-lib/aws-iam";
+import { Stage } from "../constants";
 
 export class TaiGerPortalCdkStack extends Stack {
     constructor(scope: Construct, id: string, props?: StackProps) {
@@ -29,10 +30,8 @@ export class TaiGerPortalCdkStack extends Stack {
         const existingBucketName = "taiger-file-storage-development-website";
         const existingBucket = s3.Bucket.fromBucketName(this, "ExistingBucket", existingBucketName);
 
-        // const prodBucket = new s3.Bucket(this, 'ProdBucket', {
-        //   bucketName: 'taiger-file-storage-production-website',
-        //   versioned: false,
-        // });
+        // const prodBucketName = "taiger-file-storage-development-website";
+        // const prodBucket = s3.Bucket.fromBucketName(this, "ExistingBucket", prodBucketName);
 
         // CodePipeline Artifact
         const sourceOutput = new codepipeline.Artifact();
@@ -52,46 +51,76 @@ export class TaiGerPortalCdkStack extends Stack {
         });
 
         // CodeBuild project
-        const buildProject = new codebuild.PipelineProject(this, "BuildProject", {
-            environment: {
-                buildImage: codebuild.LinuxBuildImage.AMAZON_LINUX_2_4,
-                environmentVariables: {
-                    REACT_APP_STAGE: { value: "Beta" } // Add your environment variables here
-                }
-            },
-            buildSpec: codebuild.BuildSpec.fromObject({
-                version: "0.2",
-                phases: {
-                    install: {
-                        runtimeVersions: {
-                            nodejs: "18"
-                        }
-                    },
-                    pre_build: {
-                        commands: [
-                            // 'cd client', // Navigate to the subdirectory
-                            "npm install"
-                        ]
-                    },
-                    build: {
-                        commands: ["npm run build"]
+        interface BuildProjectProps {
+            stage: string;
+            prodUrl: string;
+        }
+        const createBuildProject = (props: BuildProjectProps): codebuild.PipelineProject => {
+            const { stage, prodUrl } = props;
+
+            return new codebuild.PipelineProject(this, `BuildProject-${stage}`, {
+                environment: {
+                    buildImage: codebuild.LinuxBuildImage.AMAZON_LINUX_2_4,
+                    environmentVariables: {
+                        REACT_APP_STAGE: { value: stage }, // Set the stage environment variable
+                        REACT_APP_PROD_URL: { value: prodUrl }
                     }
                 },
-                artifacts: {
-                    // 'base-directory': 'client/build', // Adjust base directory to the subdirectory's build folder
-                    "base-directory": "build", // specify the base directory where build artifacts are located
-                    files: ["**/*"] // include all files and subdirectories under 'build'
-                }
-            })
+                buildSpec: codebuild.BuildSpec.fromObject({
+                    version: "0.2",
+                    phases: {
+                        install: {
+                            runtimeVersions: {
+                                nodejs: "18"
+                            },
+                            commands: ["npm install"]
+                        },
+                        build: {
+                            commands: ["npm run build"]
+                        }
+                    },
+                    artifacts: {
+                        "base-directory": "build",
+                        files: ["**/*"]
+                    }
+                })
+            });
+        };
+
+        const buildBetaProject = createBuildProject({
+            stage: Stage.Beta_FE,
+            prodUrl: "https://integ.taigerconsultancy-portal.com"
         });
 
+        // const buildProdProject = createBuildProject({
+        //     stage: Stage.Prod_NA,
+        //     prodUrl: "https://integ.taigerconsultancy-portal.com"
+        // });
+
         // Build action
-        const buildAction = new codepipeline_actions.CodeBuildAction({
+        const buildBetaAction = new codepipeline_actions.CodeBuildAction({
             actionName: "Build",
-            project: buildProject,
+            project: buildBetaProject,
             input: sourceOutput,
             outputs: [new codepipeline.Artifact()]
         });
+
+        const buildBetaApprovalAction = new codepipeline_actions.ManualApprovalAction({
+            actionName: `Approval-${Stage.Beta_FE}`,
+            notifyEmails: ["taiger.leoc@gmail.com"] // Optional: Notify email addresses for approval
+        });
+
+        // const buildProdAction = new codepipeline_actions.CodeBuildAction({
+        //     actionName: "Build-Prod",
+        //     project: buildProdProject,
+        //     input: sourceOutput,
+        //     outputs: [new codepipeline.Artifact()]
+        // });
+
+        // const buildProdApprovalAction = new codepipeline_actions.ManualApprovalAction({
+        //     actionName: `Approval-${Stage.Prod_NA}`,
+        //     notifyEmails: ["taiger.leoc@gmail.com"] // Optional: Notify email addresses for approval
+        // });
 
         // CodeBuild project for CloudFront cache invalidation
         const invalidateCacheProject = new codebuild.PipelineProject(
@@ -133,14 +162,14 @@ export class TaiGerPortalCdkStack extends Stack {
         const betaDeployAction = new codepipeline_actions.S3DeployAction({
             actionName: "Beta_Deploy",
             bucket: existingBucket,
-            input: buildAction?.actionProperties?.outputs![0]
+            input: buildBetaAction?.actionProperties?.outputs![0]
         });
 
         // // Deploy to Prod
         // const prodDeployAction = new codepipeline_actions.S3DeployAction({
-        //   actionName: 'Prod_Deploy',
-        //   bucket: prodBucket,
-        //   input: buildAction.actionProperties.outputs[0],
+        //     actionName: "Prod_Deploy",
+        //     bucket: prodBucket,
+        //     input: buildProdAction?.actionProperties?.outputs![0]
         // });
 
         // Define the pipeline
@@ -152,7 +181,7 @@ export class TaiGerPortalCdkStack extends Stack {
                 },
                 {
                     stageName: "Build",
-                    actions: [buildAction]
+                    actions: [buildBetaAction, buildBetaApprovalAction]
                 },
                 {
                     stageName: "Beta_Deploy",
