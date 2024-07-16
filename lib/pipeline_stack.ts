@@ -13,9 +13,11 @@ import * as codepipeline_actions from "aws-cdk-lib/aws-codepipeline-actions";
 import * as s3 from "aws-cdk-lib/aws-s3";
 // import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from "aws-cdk-lib/aws-iam";
-import { STAGES } from "../constants";
+import { Region, STAGES, Stage } from "../constants";
 import {
     AWS_CODEPIPELINE_APPROVER_EMAIL,
+    AWS_S3_BUCKET_DEV_FRONTEND,
+    AWS_S3_BUCKET_PROD_FRONTEND,
     GITHUB_OWNER,
     GITHUB_PACKAGE_BRANCH,
     GITHUB_REPO,
@@ -31,7 +33,25 @@ export class MyPipelineStack extends Stack {
         // Define the pipeline
         const pipeline = new codepipeline.Pipeline(this, "Pipeline", {
             pipelineName: PIPELINE_NAME,
-            restartExecutionOnUpdate: true
+            restartExecutionOnUpdate: true,
+            crossRegionReplicationBuckets: {
+                [Region.IAD]: s3.Bucket.fromBucketAttributes(
+                    this,
+                    `crossRegionBucket-${Stage.Beta_FE}`,
+                    {
+                        bucketArn: AWS_S3_BUCKET_DEV_FRONTEND,
+                        region: Region.IAD
+                    }
+                ),
+                [Region.NRT]: s3.Bucket.fromBucketAttributes(
+                    this,
+                    `crossRegionBucket-${Stage.Prod_NA}`,
+                    {
+                        bucketArn: AWS_S3_BUCKET_PROD_FRONTEND,
+                        region: Region.NRT
+                    }
+                )
+            }
         });
 
         // CodePipeline Artifact
@@ -50,117 +70,119 @@ export class MyPipelineStack extends Stack {
 
         pipeline.addStage({ stageName: "Source", actions: [sourceAction] });
 
-        STAGES.forEach(({ stageName, account, bucket, apiDomain, cloudfrontId, isProd }) => {
-            // Reference existing S3 bucket
-            const existingBucket = s3.Bucket.fromBucketName(
-                this,
-                `ExistingBucket-${stageName}`,
-                bucket
-            );
+        STAGES.forEach(
+            ({ stageName, account, bucketArn, apiDomain, cloudfrontId, isProd, region }) => {
+                // Reference existing S3 bucketArn
+                const existingBucket = s3.Bucket.fromBucketAttributes(
+                    this,
+                    `ExistingBucket-${stageName}`,
+                    { bucketArn, region }
+                );
 
-            // CodeBuild project
-            const buildProject = new codebuild.PipelineProject(this, `Build-${stageName}`, {
-                environment: {
-                    buildImage: codebuild.LinuxBuildImage.AMAZON_LINUX_2_4,
-                    environmentVariables: {
-                        REACT_APP_STAGE: { value: stageName },
-                        REACT_APP_PROD_URL: { value: apiDomain },
-                        GENERATE_SOURCEMAP: { value: false },
-                        CI: { value: "true" } // Setting the CI environment variable
-                    }
-                },
-                buildSpec: codebuild.BuildSpec.fromObject({
-                    version: "0.2",
-                    phases: {
-                        install: {
-                            runtimeVersions: {
-                                nodejs: "18"
-                            }
-                        },
-                        pre_build: { commands: ["cd client", "npm install"] },
-                        build: {
-                            commands: ["npm run test", "npm run build"]
-                        }
-                    },
-                    artifacts: {
-                        "base-directory": "client/build",
-                        files: ["**/*"]
-                    }
-                })
-            });
-
-            // Build action
-            const buildAction = new codepipeline_actions.CodeBuildAction({
-                actionName: `Build-${stageName}`,
-                project: buildProject,
-                input: sourceOutput,
-                outputs: [new codepipeline.Artifact()]
-            });
-
-            // Deploy action to S3
-            const deployAction = new codepipeline_actions.S3DeployAction({
-                actionName: `Deploy-${stageName}`,
-                bucket: existingBucket,
-                input: buildAction?.actionProperties?.outputs![0]
-            });
-
-            // Manual approval action
-            const approvalAction = new codepipeline_actions.ManualApprovalAction({
-                actionName: `Approval-${stageName}`,
-                notifyEmails: [AWS_CODEPIPELINE_APPROVER_EMAIL]
-            });
-
-            // CodeBuild project for CloudFront cache invalidation
-            const invalidateCacheProject = new codebuild.PipelineProject(
-                this,
-                `InvalidateCacheProject-${stageName}`,
-                {
+                // CodeBuild project
+                const buildProject = new codebuild.PipelineProject(this, `Build-${stageName}`, {
                     environment: {
-                        buildImage: codebuild.LinuxBuildImage.AMAZON_LINUX_2_4
+                        buildImage: codebuild.LinuxBuildImage.AMAZON_LINUX_2_4,
+                        environmentVariables: {
+                            REACT_APP_STAGE: { value: stageName },
+                            REACT_APP_PROD_URL: { value: apiDomain },
+                            GENERATE_SOURCEMAP: { value: false },
+                            CI: { value: "true" } // Setting the CI environment variable
+                        }
                     },
                     buildSpec: codebuild.BuildSpec.fromObject({
                         version: "0.2",
                         phases: {
+                            install: {
+                                runtimeVersions: {
+                                    nodejs: "18"
+                                }
+                            },
+                            pre_build: { commands: ["cd client", "npm install"] },
                             build: {
-                                commands: [
-                                    // Replace with AWS CLI command to invalidate CloudFront cache
-                                    `aws cloudfront create-invalidation --distribution-id ${cloudfrontId} --paths "/*"`
-                                ]
+                                commands: ["npm run test", "npm run build"]
                             }
+                        },
+                        artifacts: {
+                            "base-directory": "client/build",
+                            files: ["**/*"]
                         }
                     })
-                }
-            );
+                });
 
-            // Add the necessary permissions to the CodeBuild project's role
-            invalidateCacheProject.addToRolePolicy(
-                new iam.PolicyStatement({
-                    actions: ["cloudfront:CreateInvalidation"],
-                    resources: [`arn:aws:cloudfront::${account}:distribution/${cloudfrontId}`]
-                })
-            );
+                // Build action
+                const buildAction = new codepipeline_actions.CodeBuildAction({
+                    actionName: `Build-${stageName}`,
+                    project: buildProject,
+                    input: sourceOutput,
+                    outputs: [new codepipeline.Artifact()]
+                });
 
-            const invalidationCloudfrontAction = new codepipeline_actions.CodeBuildAction({
-                actionName: `Invalidate_Cache-${stageName}`,
-                project: invalidateCacheProject,
-                input: sourceOutput
-            });
-            // Add actions to pipeline stages
-            pipeline.addStage({
-                stageName: `Build-${stageName}`,
-                actions: [buildAction]
-            });
-            if (isProd) {
-                // Add action to approval
+                // Deploy action to S3
+                const deployAction = new codepipeline_actions.S3DeployAction({
+                    actionName: `Deploy-${stageName}`,
+                    bucket: existingBucket,
+                    input: buildAction?.actionProperties?.outputs![0]
+                });
+
+                // Manual approval action
+                const approvalAction = new codepipeline_actions.ManualApprovalAction({
+                    actionName: `Approval-${stageName}`,
+                    notifyEmails: [AWS_CODEPIPELINE_APPROVER_EMAIL]
+                });
+
+                // CodeBuild project for CloudFront cache invalidation
+                const invalidateCacheProject = new codebuild.PipelineProject(
+                    this,
+                    `InvalidateCacheProject-${stageName}`,
+                    {
+                        environment: {
+                            buildImage: codebuild.LinuxBuildImage.AMAZON_LINUX_2_4
+                        },
+                        buildSpec: codebuild.BuildSpec.fromObject({
+                            version: "0.2",
+                            phases: {
+                                build: {
+                                    commands: [
+                                        // Replace with AWS CLI command to invalidate CloudFront cache
+                                        `aws cloudfront create-invalidation --distribution-id ${cloudfrontId} --paths "/*"`
+                                    ]
+                                }
+                            }
+                        })
+                    }
+                );
+
+                // Add the necessary permissions to the CodeBuild project's role
+                invalidateCacheProject.addToRolePolicy(
+                    new iam.PolicyStatement({
+                        actions: ["cloudfront:CreateInvalidation"],
+                        resources: [`arn:aws:cloudfront::${account}:distribution/${cloudfrontId}`]
+                    })
+                );
+
+                const invalidationCloudfrontAction = new codepipeline_actions.CodeBuildAction({
+                    actionName: `Invalidate_Cache-${stageName}`,
+                    project: invalidateCacheProject,
+                    input: sourceOutput
+                });
+                // Add actions to pipeline stages
                 pipeline.addStage({
-                    stageName: `Approval-${stageName}`,
-                    actions: [approvalAction]
+                    stageName: `Build-${stageName}`,
+                    actions: [buildAction]
+                });
+                if (isProd) {
+                    // Add action to approval
+                    pipeline.addStage({
+                        stageName: `Approval-${stageName}`,
+                        actions: [approvalAction]
+                    });
+                }
+                pipeline.addStage({
+                    stageName: `Deploy-${stageName}`,
+                    actions: [deployAction, invalidationCloudfrontAction]
                 });
             }
-            pipeline.addStage({
-                stageName: `Deploy-${stageName}`,
-                actions: [deployAction, invalidationCloudfrontAction]
-            });
-        });
+        );
     }
 }
