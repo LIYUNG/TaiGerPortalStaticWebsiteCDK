@@ -145,6 +145,11 @@ export class MyPipelineStack extends Stack {
                 project: invalidateCacheProject,
                 input: sourceOutput
             });
+            // Add actions to pipeline stages
+            pipeline.addStage({
+                stageName: `Build-${stageName}`,
+                actions: [buildAction]
+            });
             if (isProd) {
                 // Add action to approval
                 pipeline.addStage({
@@ -152,11 +157,6 @@ export class MyPipelineStack extends Stack {
                     actions: [approvalAction]
                 });
             }
-            // Add actions to pipeline stages
-            pipeline.addStage({
-                stageName: `Build-${stageName}`,
-                actions: [buildAction]
-            });
             pipeline.addStage({
                 stageName: `Deploy-${stageName}`,
                 actions: [deployAction, invalidationCloudfrontAction]
