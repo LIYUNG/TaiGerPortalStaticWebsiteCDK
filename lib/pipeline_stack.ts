@@ -1,12 +1,14 @@
 import {
     Stack,
     StackProps,
-    // Duration,
+    Duration,
     // RemovalPolicy,
     SecretValue
 } from "aws-cdk-lib";
 import { Construct } from "constructs";
-// import * as sqs from 'aws-cdk-lib/aws-sqs';
+import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
+import * as cloudwatch_actions from "aws-cdk-lib/aws-cloudwatch-actions";
+import * as sns from "aws-cdk-lib/aws-sns";
 import * as codebuild from "aws-cdk-lib/aws-codebuild";
 import * as codepipeline from "aws-cdk-lib/aws-codepipeline";
 import * as codepipeline_actions from "aws-cdk-lib/aws-codepipeline-actions";
@@ -25,10 +27,25 @@ import {
     PIPELINE_NAME,
     TENANT_NAME
 } from "../configuration";
+import { ChatbotCloudWatchIntegration } from "../constructs";
 
 export class MyPipelineStack extends Stack {
     constructor(scope: Construct, id: string, props?: StackProps) {
         super(scope, id, props);
+
+        // Define your integrated Chatbot and CloudWatch setup
+        new ChatbotCloudWatchIntegration(this, "MyChatbotCloudWatchIntegration", {
+            slackChannelConfigurationName: "taiger-dev-chatbot",
+            slackWorkspaceId: "T074TTD76BG",
+            slackChannelId: "C07CR6VPT8A",
+            alarmName: "PipelineBuildFailure",
+            metric: new cloudwatch.Metric({
+                namespace: "AWS/CodeBuild",
+                metricName: "FailedBuilds",
+                statistic: "Sum",
+                period: Duration.minutes(5)
+            })
+        });
 
         // Define the pipeline
         const pipeline = new codepipeline.Pipeline(this, "Pipeline", {
@@ -124,6 +141,29 @@ export class MyPipelineStack extends Stack {
                     bucket: existingBucket,
                     input: buildAction?.actionProperties?.outputs![0]
                 });
+
+                const snsDeployFailedTopic = new sns.Topic(this, `${stageName}-DeployFailedTopic`, {
+                    displayName: `DeployFailedSTopic-${stageName}`
+                });
+
+                new cloudwatch.Alarm(this, `${stageName}-DeployFailedAlarm`, {
+                    alarmName: `Deploy-${stageName}-Alarm`,
+                    metric: new cloudwatch.Metric({
+                        namespace: "AWS/CodePipeline",
+                        metricName: "ActionExecution",
+                        dimensionsMap: {
+                            PipelineName: pipeline.pipelineName,
+                            StageName: "Deploy",
+                            ActionName: deployAction.actionProperties.actionName
+                        },
+                        statistic: "Sum",
+                        period: Duration.minutes(1)
+                    }),
+                    threshold: 1, // Example threshold for failure
+                    evaluationPeriods: 1,
+                    comparisonOperator:
+                        cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD
+                }).addAlarmAction(new cloudwatch_actions.SnsAction(snsDeployFailedTopic));
 
                 // Manual approval action
                 const approvalAction = new codepipeline_actions.ManualApprovalAction({
