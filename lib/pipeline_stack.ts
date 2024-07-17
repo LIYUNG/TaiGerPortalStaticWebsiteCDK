@@ -121,6 +121,7 @@ export class MyPipelineStack extends Stack {
             const deployStep = new ShellStep(`Deploy-${stageName}`, {
                 input: buildStep,
                 commands: [
+                    'ls',
                     `aws s3 sync build/ s3://${existingBucket.bucketName} --delete`
                 ]
             });
