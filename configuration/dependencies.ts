@@ -1,10 +1,12 @@
 // Tenant
 export const TENANT_NAME = "TaiGer";
+export const TENANT_CDK_NAME = "TaiGerCDK";
 
 // GitHub
 export const GITHUB_TOKEN =
     "arn:aws:secretsmanager:us-east-1:669131042313:secret:beta/taigerportal-Hm1SLX";
 export const GITHUB_REPO = "TaiGer_Portal";
+export const GITHUB_CDK_REPO = "TaiGer_PortalCDK";
 export const GITHUB_OWNER = "LIYUNG";
 export const GITHUB_PACKAGE_BRANCH = "main";
 
