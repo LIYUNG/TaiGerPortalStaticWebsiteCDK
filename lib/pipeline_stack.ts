@@ -122,7 +122,7 @@ export class MyPipelineStack extends Stack {
                 input: buildStep,
                 commands: [
                     'ls',
-                    `aws s3 sync build/ s3://${existingBucket.bucketName} --delete`
+                    `aws s3 sync . s3://${existingBucket.bucketName} --delete`
                 ]
             });
 
