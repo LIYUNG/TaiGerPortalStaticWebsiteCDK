@@ -22,9 +22,23 @@ export class MainStack extends cdk.Stack {
         const bucketArn = props?.bucketArn ?? AWS_S3_BUCKET_DEV_FRONTEND;
         const env = props?.env;
         // Get the existing VPC
-        const vpc = ec2.Vpc.fromLookup(this, `Vpc-${stageName}`, {
-            vpcId: "vpc-56a58a2e",
-            region: env?.region
+        const vpc = new ec2.Vpc(this, `Vpc-${stageName}`, {
+            maxAzs: 3, // Default is all AZs in the region
+            natGateways: 0, // Number of NAT Gateways
+            subnetConfiguration: [
+                {
+                    name: "Public",
+                    subnetType: ec2.SubnetType.PUBLIC
+                },
+                {
+                    name: "Private",
+                    subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
+                },
+                {
+                    name: "Isolated",
+                    subnetType: ec2.SubnetType.PRIVATE_ISOLATED
+                }
+            ]
         });
 
         // Define User Data script
