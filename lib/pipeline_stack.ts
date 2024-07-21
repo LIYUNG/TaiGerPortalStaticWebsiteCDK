@@ -44,6 +44,12 @@ export class MyPipelineStack extends Stack {
             enableKeyRotation: true
         });
 
+        // Create the IAM Role with Admin permissions
+        const adminRole = new iam.Role(this, "PipelineAdminRole", {
+            assumedBy: new iam.ServicePrincipal("codepipeline.amazonaws.com"),
+            managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName("AdministratorAccess")]
+        });
+
         // Create the high-level CodePipeline
         const pipeline = new CodePipeline(this, "Pipeline", {
             // artifactBucket: artifactBucket,
@@ -79,6 +85,7 @@ export class MyPipelineStack extends Stack {
                     }
                 )
             },
+            role: adminRole,
             codeBuildDefaults: {
                 rolePolicy: [
                     new iam.PolicyStatement({
@@ -106,7 +113,7 @@ export class MyPipelineStack extends Stack {
             //     this,
             //     `ExistingBucket-${stageName}`,
             //     { bucketArn, region: env.region }
-            // );
+            // );-
 
             // // CodeBuild project
             // const buildStep = new CodeBuildStep(`Build-${stageName}`, {
