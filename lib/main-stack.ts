@@ -1,8 +1,6 @@
 import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import * as route53 from "aws-cdk-lib/aws-route53";
-import * as route53targets from "aws-cdk-lib/aws-route53-targets";
-
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as ec2 from "aws-cdk-lib/aws-ec2";

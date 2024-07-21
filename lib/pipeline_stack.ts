@@ -169,7 +169,7 @@ export class MyPipelineStack extends Stack {
             });
             pipeline.addStage(Stage, {
                 pre: [buildStep, deployStep],
-                post: [invalidateCacheStep]
+                post: [invalidateCacheStep] // can also delete the old ec2
             });
         });
     }
