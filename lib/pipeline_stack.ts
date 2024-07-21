@@ -18,7 +18,7 @@ import {
 import * as codepipeline_actions from "aws-cdk-lib/aws-codepipeline-actions";
 import * as s3 from "aws-cdk-lib/aws-s3";
 // import * as ec2 from 'aws-cdk-lib/aws-ec2';
-// import * as iam from "aws-cdk-lib/aws-iam";
+import * as iam from "aws-cdk-lib/aws-iam";
 import { Region, STAGES, Stage } from "../constants";
 import {
     // AWS_CODEPIPELINE_APPROVER_EMAIL,
@@ -78,6 +78,14 @@ export class MyPipelineStack extends Stack {
                         region: Region.NRT
                     }
                 )
+            },
+            codeBuildDefaults: {
+                rolePolicy: [
+                    new iam.PolicyStatement({
+                        actions: ["*"],
+                        resources: ["*"]
+                    })
+                ]
             }
         });
 
