@@ -15,15 +15,17 @@ export const GITHUB_PACKAGE_BRANCH = "main";
 export const PIPELINE_NAME = "TaiGer_Portal-Frontend-Pipeline";
 
 export const AWS_ACCOUNT = "669131042313";
-
+export const DOMAIN_NAME = "taigerconsultancy-portal.com";
 // Beta
 export const AWS_S3_BUCKET_DEV_FRONTEND = "arn:aws:s3:::taiger-file-storage-development-website";
-export const API_BETA_DOMAIN = "https://integ.taigerconsultancy-portal.com";
+export const API_BETA_DOMAINNAME = `test.${DOMAIN_NAME}`;
+export const API_BETA_DOMAIN = `https://${API_BETA_DOMAINNAME}`;
 export const CLOUDFRONT_ID_DEV = "E140WBRXPYSUB4";
 
 // Prod
 export const AWS_S3_BUCKET_PROD_FRONTEND = "arn:aws:s3:::taiger-file-storage-production-website";
-export const API_PROD_DOMAIN = "https://taigerconsultancy-portal.com";
+export const API_PROD_DOMAINNAME = `prod.${DOMAIN_NAME}`;
+export const API_PROD_DOMAIN = `https://${API_PROD_DOMAINNAME}`;
 export const CLOUDFRONT_ID_PROD = "E31WYFO0IE8GZL";
 
 export const AWS_CODEPIPELINE_APPROVER_EMAIL = "taiger.leoc@gmail.com";
