@@ -1,6 +1,8 @@
-import { Stack, StackProps, Duration, SecretValue } from "aws-cdk-lib";
+import { Stack, StackProps, SecretValue } from "aws-cdk-lib";
 import { Construct } from "constructs";
-import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
+import * as kms from "aws-cdk-lib/aws-kms";
+
+// import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 // import * as cloudwatch_actions from "aws-cdk-lib/aws-cloudwatch-actions";
 // import * as sns from "aws-cdk-lib/aws-sns";
 // import * as codebuild from "aws-cdk-lib/aws-codebuild";
@@ -26,34 +28,26 @@ import {
     GITHUB_OWNER,
     GITHUB_PACKAGE_BRANCH,
     GITHUB_REPO,
-    GITHUB_TOKEN,
+    GITHUB_TOKEN
     // PIPELINE_NAME,
     // TENANT_CDK_NAME,
     // TENANT_NAME
 } from "../configuration";
-import { ChatbotCloudWatchIntegration } from "../constructs";
 import { Deployment } from "./stage";
 
 export class MyPipelineStack extends Stack {
     constructor(scope: Construct, id: string, props?: StackProps) {
         super(scope, id, props);
 
-        // Define your integrated Chatbot and CloudWatch setup
-        new ChatbotCloudWatchIntegration(this, "MyChatbotCloudWatchIntegration", {
-            slackChannelConfigurationName: "taiger-dev-chatbot",
-            slackWorkspaceId: "T074TTD76BG",
-            slackChannelId: "C07CR6VPT8A",
-            alarmName: "PipelineBuildFailure",
-            metric: new cloudwatch.Metric({
-                namespace: "AWS/CodeBuild",
-                metricName: "FailedBuilds",
-                statistic: "Sum",
-                period: Duration.minutes(5)
-            })
+        // Create a KMS key
+        const kmsKey = new kms.Key(this, "KMSKey", {
+            enableKeyRotation: true
         });
 
         // Create the high-level CodePipeline
         const pipeline = new CodePipeline(this, "Pipeline", {
+            // artifactBucket: artifactBucket,
+            crossAccountKeys: true,
             synth: new ShellStep("Synth", {
                 input: CodePipelineSource.gitHub(
                     `${GITHUB_OWNER}/${GITHUB_CDK_REPO}`,
@@ -70,6 +64,7 @@ export class MyPipelineStack extends Stack {
                     this,
                     `crossRegionBucket-${Stage.Beta_FE}`,
                     {
+                        encryptionKey: kmsKey,
                         bucketArn: AWS_S3_BUCKET_DEV_FRONTEND,
                         region: Region.IAD
                     }
@@ -78,6 +73,7 @@ export class MyPipelineStack extends Stack {
                     this,
                     `crossRegionBucket-${Stage.Prod_NA}`,
                     {
+                        encryptionKey: kmsKey,
                         bucketArn: AWS_S3_BUCKET_PROD_FRONTEND,
                         region: Region.NRT
                     }
@@ -95,12 +91,12 @@ export class MyPipelineStack extends Stack {
             }
         );
 
-        STAGES.forEach(({ stageName, bucketArn, apiDomain, cloudfrontId, region }) => {
+        STAGES.forEach(({ stageName, bucketArn, apiDomain, cloudfrontId, env }) => {
             // Reference existing S3 bucketArn
             const existingBucket = s3.Bucket.fromBucketAttributes(
                 this,
                 `ExistingBucket-${stageName}`,
-                { bucketArn, region }
+                { bucketArn, region: env.region }
             );
 
             // CodeBuild project
@@ -120,10 +116,7 @@ export class MyPipelineStack extends Stack {
 
             const deployStep = new ShellStep(`Deploy-${stageName}`, {
                 input: buildStep,
-                commands: [
-                    'ls',
-                    `aws s3 sync . s3://${existingBucket.bucketName} --delete`
-                ]
+                commands: ["ls", `aws s3 sync . s3://${existingBucket.bucketName} --delete`]
             });
 
             const invalidateCacheStep = new ShellStep(`InvalidateCache-${stageName}`, {
@@ -162,7 +155,10 @@ export class MyPipelineStack extends Stack {
             // });
 
             // Add stages to the pipeline
-            const Stage = new Deployment(this, `BuildDeployStage-${stageName}`);
+            const Stage = new Deployment(this, `BuildDeployStage-${stageName}`, {
+                stageName,
+                env: { region: env.region, account: env.account }
+            });
             pipeline.addStage(Stage, {
                 pre: [buildStep, deployStep],
                 post: [invalidateCacheStep]

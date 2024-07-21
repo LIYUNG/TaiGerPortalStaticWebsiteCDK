@@ -17,8 +17,7 @@ export enum Stage {
 export const STAGES = [
     {
         stageName: Stage.Beta_FE,
-        region: Region.IAD,
-        account: AWS_ACCOUNT,
+        env: { region: Region.IAD, account: AWS_ACCOUNT },
         bucketArn: AWS_S3_BUCKET_DEV_FRONTEND,
         cloudfrontId: CLOUDFRONT_ID_DEV,
         isProd: false,
@@ -26,8 +25,7 @@ export const STAGES = [
     },
     {
         stageName: Stage.Prod_NA,
-        region: Region.NRT,
-        account: AWS_ACCOUNT,
+        env: { region: Region.NRT, account: AWS_ACCOUNT },
         bucketArn: AWS_S3_BUCKET_PROD_FRONTEND,
         cloudfrontId: CLOUDFRONT_ID_PROD,
         isProd: true,
