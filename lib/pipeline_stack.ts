@@ -124,7 +124,7 @@ export class MyPipelineStack extends Stack {
 
             const deployStep = new ShellStep(`Deploy-${stageName}`, {
                 input: buildStep,
-                commands: ["ls", `aws s3 sync . s3://${existingBucket.bucketName} --delete`]
+                commands: ["ls", `aws s3 sync . s3://${existingBucket.bucketName}`]
             });
 
             const invalidateCacheStep = new ShellStep(`InvalidateCache-${stageName}`, {
