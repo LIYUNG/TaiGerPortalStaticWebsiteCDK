@@ -8,7 +8,7 @@ import * as kms from "aws-cdk-lib/aws-kms";
 // import * as codebuild from "aws-cdk-lib/aws-codebuild";
 // import * as codepipeline from "aws-cdk-lib/aws-codepipeline";
 import {
-    CodeBuildStep,
+    // CodeBuildStep,
     CodePipeline,
     CodePipelineSource,
     // ManualApprovalStep,
@@ -27,7 +27,7 @@ import {
     GITHUB_CDK_REPO,
     GITHUB_OWNER,
     GITHUB_PACKAGE_BRANCH,
-    GITHUB_REPO,
+    // GITHUB_REPO,
     GITHUB_TOKEN
     // PIPELINE_NAME,
     // TENANT_CDK_NAME,
@@ -90,48 +90,49 @@ export class MyPipelineStack extends Stack {
         });
 
         // Add source steps for both repositories
-        const sourceStep = CodePipelineSource.gitHub(
-            `${GITHUB_OWNER}/${GITHUB_REPO}`,
-            GITHUB_PACKAGE_BRANCH,
-            {
-                authentication: SecretValue.secretsManager(GITHUB_TOKEN),
-                trigger: codepipeline_actions.GitHubTrigger.WEBHOOK
-            }
-        );
+        // const sourceStep = CodePipelineSource.gitHub(
+        //     `${GITHUB_OWNER}/${GITHUB_REPO}`,
+        //     GITHUB_PACKAGE_BRANCH,
+        //     {
+        //         authentication: SecretValue.secretsManager(GITHUB_TOKEN),
+        //         trigger: codepipeline_actions.GitHubTrigger.WEBHOOK
+        //     }
+        // );
 
-        STAGES.forEach(({ stageName, bucketArn, apiDomain, cloudfrontId, env }) => {
+        // STAGES.forEach(({ stageName, bucketArn, apiDomain, cloudfrontId, env }) => {
+        STAGES.forEach(({ stageName, env }) => {
             // Reference existing S3 bucketArn
-            const existingBucket = s3.Bucket.fromBucketAttributes(
-                this,
-                `ExistingBucket-${stageName}`,
-                { bucketArn, region: env.region }
-            );
+            // const existingBucket = s3.Bucket.fromBucketAttributes(
+            //     this,
+            //     `ExistingBucket-${stageName}`,
+            //     { bucketArn, region: env.region }
+            // );
 
-            // CodeBuild project
-            const buildStep = new CodeBuildStep(`Build-${stageName}`, {
-                input: sourceStep,
-                installCommands: ["cd client", "npm install"],
-                commands: ["npm run test", "npm run build"],
-                env: {
-                    REACT_APP_STAGE: stageName,
-                    REACT_APP_PROD_URL: apiDomain,
-                    GENERATE_SOURCEMAP: "false",
-                    CI: "true"
-                },
-                primaryOutputDirectory: "client/build",
-                projectName: `BuildProject-${stageName}`
-            });
+            // // CodeBuild project
+            // const buildStep = new CodeBuildStep(`Build-${stageName}`, {
+            //     input: sourceStep,
+            //     installCommands: ["cd client", "npm install"],
+            //     commands: ["npm run test", "npm run build"],
+            //     env: {
+            //         REACT_APP_STAGE: stageName,
+            //         REACT_APP_PROD_URL: apiDomain,
+            //         GENERATE_SOURCEMAP: "false",
+            //         CI: "true"
+            //     },
+            //     primaryOutputDirectory: "client/build",
+            //     projectName: `BuildProject-${stageName}`
+            // });
 
-            const deployStep = new ShellStep(`Deploy-${stageName}`, {
-                input: buildStep,
-                commands: ["ls", `aws s3 sync . s3://${existingBucket.bucketName}`]
-            });
+            // const deployStep = new ShellStep(`Deploy-${stageName}`, {
+            //     input: buildStep,
+            //     commands: ["ls", `aws s3 sync . s3://${existingBucket.bucketName}`]
+            // });
 
-            const invalidateCacheStep = new ShellStep(`InvalidateCache-${stageName}`, {
-                commands: [
-                    `aws cloudfront create-invalidation --distribution-id ${cloudfrontId} --paths "/*"`
-                ]
-            });
+            // const invalidateCacheStep = new ShellStep(`InvalidateCache-${stageName}`, {
+            //     commands: [
+            //         `aws cloudfront create-invalidation --distribution-id ${cloudfrontId} --paths "/*"`
+            //     ]
+            // });
 
             // const snsDeployFailedTopic = new sns.Topic(this, `${stageName}-DeployFailedTopic`, {
             //     displayName: `DeployFailedSTopic-${stageName}`
@@ -167,10 +168,11 @@ export class MyPipelineStack extends Stack {
                 stageName,
                 env: { region: env.region, account: env.account }
             });
-            pipeline.addStage(Stage, {
-                pre: [buildStep, deployStep],
-                post: [invalidateCacheStep] // can also delete the old ec2
-            });
+            // pipeline.addStage(Stage, {
+            //     pre: [buildStep, deployStep],
+            //     post: [invalidateCacheStep] // can also delete the old ec2
+            // });
+            pipeline.addStage(Stage);
         });
     }
 }
