@@ -221,7 +221,7 @@ export class MainStack extends cdk.Stack {
                     ttl: cdk.Duration.seconds(0)
                 }
             ],
-            domainNames: ["test.taigerconsultancy-portal.com"],
+            domainNames: [domain],
             certificate: certificate,
             priceClass: cloudfront.PriceClass.PRICE_CLASS_ALL
         });
