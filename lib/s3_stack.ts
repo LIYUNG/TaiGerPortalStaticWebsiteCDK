@@ -18,7 +18,6 @@ export class S3Stack extends NestedStack {
 
         // Create an S3 bucket in the primary region with KMS encryption
         this.s3 = new s3.Bucket(this, `taigerpipeline-artifact-${props?.stageName}`, {
-            bucketName: `taigerpipeline-artifact-${props?.stageName}`.toLowerCase(),
             encryption: s3.BucketEncryption.KMS,
             encryptionKey: kmsKey,
             removalPolicy: RemovalPolicy.DESTROY
