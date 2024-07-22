@@ -6,6 +6,7 @@ import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as s3 from "aws-cdk-lib/aws-s3";
+import * as logs from "aws-cdk-lib/aws-logs";
 import * as certificatemanager from "aws-cdk-lib/aws-certificatemanager";
 import {
     API_BETA_DOMAINNAME,
@@ -27,6 +28,21 @@ export class MainStack extends cdk.Stack {
         const stageName = props?.stageName ?? Stage.Beta_FE;
         const bucketArn = props?.bucketArn ?? AWS_S3_BUCKET_DEV_FRONTEND;
         const env = props?.env;
+
+        // Create a CloudWatch Log Group
+        const logGroup = new logs.LogGroup(this, `TaiGerLogGroup-${stageName}`, {
+            logGroupName: `/aws/taiger-portal-log-group-${stageName}`,
+            retention: logs.RetentionDays.ONE_WEEK, // Set the retention period as needed
+            removalPolicy: cdk.RemovalPolicy.DESTROY // Automatically delete log group on stack deletion
+        });
+
+        // Create a CloudWatch Log Stream
+        new logs.LogStream(this, `MyLogStream-${stageName}`, {
+            logGroup: logGroup,
+            logStreamName: `taiger-portal-server-stream-${stageName}`,
+            removalPolicy: cdk.RemovalPolicy.DESTROY // Automatically delete log stream on stack deletion
+        });
+
         // Get the existing VPC
         const vpc = new ec2.Vpc(this, `Vpc-${stageName}`, {
             maxAzs: 3, // Default is all AZs in the region
