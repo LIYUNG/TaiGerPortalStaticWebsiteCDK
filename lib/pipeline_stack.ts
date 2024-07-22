@@ -1,6 +1,6 @@
-import { Stack, StackProps, SecretValue } from "aws-cdk-lib";
+import { Stack, StackProps, SecretValue, RemovalPolicy } from "aws-cdk-lib";
 import { Construct } from "constructs";
-// import * as kms from "aws-cdk-lib/aws-kms";
+import * as kms from "aws-cdk-lib/aws-kms";
 
 // import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 // import * as cloudwatch_actions from "aws-cdk-lib/aws-cloudwatch-actions";
@@ -16,7 +16,7 @@ import {
 } from "aws-cdk-lib/pipelines";
 
 import * as codepipeline_actions from "aws-cdk-lib/aws-codepipeline-actions";
-// import * as s3 from "aws-cdk-lib/aws-s3";
+import * as s3 from "aws-cdk-lib/aws-s3";
 // import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from "aws-cdk-lib/aws-iam";
 import { STAGES } from "../constants";
@@ -39,10 +39,17 @@ export class MyPipelineStack extends Stack {
     constructor(scope: Construct, id: string, props?: StackProps) {
         super(scope, id, props);
 
-        // // Create a KMS key
-        // const kmsKey = new kms.Key(this, "KMSKey", {
-        //     enableKeyRotation: true
-        // });
+        // Create a KMS key
+        const kmsKey = new kms.Key(this, "KMSKey", {
+            enableKeyRotation: true
+        });
+
+        // Create an S3 bucket in the primary region with KMS encryption
+        const artifactBucket = new s3.Bucket(this, "TaiGerPipelineBucket", {
+            encryption: s3.BucketEncryption.KMS,
+            encryptionKey: kmsKey,
+            removalPolicy: RemovalPolicy.DESTROY
+        });
 
         // // Create the IAM Role with Admin permissions
         // const adminRole = new iam.Role(this, "PipelineAdminRole", {
@@ -65,8 +72,8 @@ export class MyPipelineStack extends Stack {
 
         // Create the high-level CodePipeline
         const pipeline = new CodePipeline(this, "Pipeline", {
-            // artifactBucket: artifactBucket,
-            // crossAccountKeys: true,
+            artifactBucket: artifactBucket,
+            crossAccountKeys: true,
             synth: new ShellStep("Synth", {
                 input: CodePipelineSource.gitHub(
                     `${GITHUB_OWNER}/${GITHUB_CDK_REPO}`,
