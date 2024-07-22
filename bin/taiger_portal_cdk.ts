@@ -8,7 +8,11 @@ import { MySlackboteStack } from "../lib/slackbot_stack";
 
 const app = new cdk.App();
 
-new MySlackboteStack(app, "MySlackboteStack", { env: { region: Region.IAD } });
-new MyPipelineStack(app, "MyPipelineStack", { env: { region: Region.IAD } });
+new MySlackboteStack(app, "MySlackboteStack", {
+    env: { region: Region.IAD }
+});
+new MyPipelineStack(app, "MyPipelineStack", {
+    env: { region: Region.IAD }
+});
 
 app.synth();
