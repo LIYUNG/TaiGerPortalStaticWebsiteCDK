@@ -1,6 +1,6 @@
-import { Stack, StackProps, SecretValue } from "aws-cdk-lib";
+import { Stack, StackProps, SecretValue, RemovalPolicy } from "aws-cdk-lib";
 import { Construct } from "constructs";
-// import * as kms from "aws-cdk-lib/aws-kms";
+import * as kms from "aws-cdk-lib/aws-kms";
 
 // import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 // import * as cloudwatch_actions from "aws-cdk-lib/aws-cloudwatch-actions";
@@ -16,10 +16,10 @@ import {
 } from "aws-cdk-lib/pipelines";
 
 import * as codepipeline_actions from "aws-cdk-lib/aws-codepipeline-actions";
-// import * as s3 from "aws-cdk-lib/aws-s3";
+import * as s3 from "aws-cdk-lib/aws-s3";
 // import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from "aws-cdk-lib/aws-iam";
-import { Region, STAGES, Stage } from "../constants";
+import { Region, STAGES } from "../constants";
 import {
     // AWS_CODEPIPELINE_APPROVER_EMAIL,
     // AWS_S3_BUCKET_DEV_FRONTEND,
@@ -34,23 +34,23 @@ import {
     // TENANT_NAME
 } from "../configuration";
 import { Deployment } from "./stage";
-import { S3Stack } from "./s3_stack";
+// import { S3Stack } from "./s3_stack";
 
 export class MyPipelineStack extends Stack {
     constructor(scope: Construct, id: string, props?: StackProps) {
         super(scope, id, props);
 
-        // // Create a KMS key
-        // const kmsKey = new kms.Key(this, "KMSKey", {
-        //     enableKeyRotation: true
-        // });
+        // Create a KMS key
+        const kmsKey = new kms.Key(this, "KMSKey", {
+            enableKeyRotation: true
+        });
 
-        // // Create an S3 bucket in the primary region with KMS encryption
-        // const artifactBucketBeta = new s3.Bucket(this, "TaiGerPipelineBucketBeta", {
-        //     encryption: s3.BucketEncryption.KMS,
-        //     encryptionKey: kmsKey,
-        //     removalPolicy: RemovalPolicy.DESTROY
-        // });
+        // Create an S3 bucket in the primary region with KMS encryption
+        const artifactBucketBeta = new s3.Bucket(this, "TaiGerPipelineBucketBeta", {
+            encryption: s3.BucketEncryption.KMS,
+            encryptionKey: kmsKey,
+            removalPolicy: RemovalPolicy.DESTROY
+        });
 
         // const artifactBucketProd = new s3.Bucket(this, "TaiGerPipelineBucketProd", {
         //     encryption: s3.BucketEncryption.KMS,
@@ -77,15 +77,6 @@ export class MyPipelineStack extends Stack {
 
         // adminRole.addToPolicy(s3AccessPolicy);
 
-        const s3StackBeta = new S3Stack(this, "S3StackBeta", {
-            env: { region: Region.IAD },
-            stageName: Stage.Beta_FE
-        });
-        const s3StackProd = new S3Stack(this, "S3StackProd", {
-            env: { region: Region.NRT },
-            crossRegionReferences: true,
-            stageName: Stage.Prod_NA
-        });
         // Create the high-level CodePipeline
         const pipeline = new CodePipeline(this, "Pipeline", {
             // artifactBucket: artifactBucket,
@@ -102,8 +93,7 @@ export class MyPipelineStack extends Stack {
                 commands: ["npm ci", "npm run build", "npx cdk synth"]
             }),
             crossRegionReplicationBuckets: {
-                [Region.IAD]: s3StackBeta.s3,
-                [Region.NRT]: s3StackProd.s3
+                [Region.NRT]: artifactBucketBeta
             },
             // role: adminRole,
             codeBuildDefaults: {
