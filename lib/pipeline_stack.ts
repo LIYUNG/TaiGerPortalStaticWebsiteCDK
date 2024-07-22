@@ -83,6 +83,7 @@ export class MyPipelineStack extends Stack {
         });
         const s3StackProd = new S3Stack(this, "S3StackProd", {
             env: { region: Region.NRT },
+            crossRegionReferences: true,
             stageName: Stage.Prod_NA
         });
         // Create the high-level CodePipeline
