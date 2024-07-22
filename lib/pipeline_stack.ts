@@ -50,6 +50,19 @@ export class MyPipelineStack extends Stack {
             managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName("AdministratorAccess")]
         });
 
+        const s3AccessPolicy = new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
+            resources: [
+                `arn:aws:s3:::${AWS_S3_BUCKET_DEV_FRONTEND}/*`,
+                `arn:aws:s3:::${AWS_S3_BUCKET_DEV_FRONTEND}`,
+                `arn:aws:s3:::${AWS_S3_BUCKET_PROD_FRONTEND}/*`,
+                `arn:aws:s3:::${AWS_S3_BUCKET_PROD_FRONTEND}`
+            ]
+        });
+
+        adminRole.addToPolicy(s3AccessPolicy);
+
         // Create the high-level CodePipeline
         const pipeline = new CodePipeline(this, "Pipeline", {
             // artifactBucket: artifactBucket,
