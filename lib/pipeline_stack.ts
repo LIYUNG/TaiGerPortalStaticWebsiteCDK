@@ -1,6 +1,6 @@
 import { Stack, StackProps, SecretValue } from "aws-cdk-lib";
 import { Construct } from "constructs";
-import * as kms from "aws-cdk-lib/aws-kms";
+// import * as kms from "aws-cdk-lib/aws-kms";
 
 // import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 // import * as cloudwatch_actions from "aws-cdk-lib/aws-cloudwatch-actions";
@@ -16,14 +16,14 @@ import {
 } from "aws-cdk-lib/pipelines";
 
 import * as codepipeline_actions from "aws-cdk-lib/aws-codepipeline-actions";
-import * as s3 from "aws-cdk-lib/aws-s3";
+// import * as s3 from "aws-cdk-lib/aws-s3";
 // import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from "aws-cdk-lib/aws-iam";
-import { Region, STAGES, Stage } from "../constants";
+import { STAGES } from "../constants";
 import {
     // AWS_CODEPIPELINE_APPROVER_EMAIL,
-    AWS_S3_BUCKET_DEV_FRONTEND,
-    AWS_S3_BUCKET_PROD_FRONTEND,
+    // AWS_S3_BUCKET_DEV_FRONTEND,
+    // AWS_S3_BUCKET_PROD_FRONTEND,
     GITHUB_CDK_REPO,
     GITHUB_OWNER,
     GITHUB_PACKAGE_BRANCH,
@@ -39,34 +39,34 @@ export class MyPipelineStack extends Stack {
     constructor(scope: Construct, id: string, props?: StackProps) {
         super(scope, id, props);
 
-        // Create a KMS key
-        const kmsKey = new kms.Key(this, "KMSKey", {
-            enableKeyRotation: true
-        });
+        // // Create a KMS key
+        // const kmsKey = new kms.Key(this, "KMSKey", {
+        //     enableKeyRotation: true
+        // });
 
-        // Create the IAM Role with Admin permissions
-        const adminRole = new iam.Role(this, "PipelineAdminRole", {
-            assumedBy: new iam.ServicePrincipal("codepipeline.amazonaws.com"),
-            managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName("AdministratorAccess")]
-        });
+        // // Create the IAM Role with Admin permissions
+        // const adminRole = new iam.Role(this, "PipelineAdminRole", {
+        //     assumedBy: new iam.ServicePrincipal("codepipeline.amazonaws.com"),
+        //     managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName("AdministratorAccess")]
+        // });
 
-        const s3AccessPolicy = new iam.PolicyStatement({
-            effect: iam.Effect.ALLOW,
-            actions: ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
-            resources: [
-                `arn:aws:s3:::${AWS_S3_BUCKET_DEV_FRONTEND}/*`,
-                `arn:aws:s3:::${AWS_S3_BUCKET_DEV_FRONTEND}`,
-                `arn:aws:s3:::${AWS_S3_BUCKET_PROD_FRONTEND}/*`,
-                `arn:aws:s3:::${AWS_S3_BUCKET_PROD_FRONTEND}`
-            ]
-        });
+        // const s3AccessPolicy = new iam.PolicyStatement({
+        //     effect: iam.Effect.ALLOW,
+        //     actions: ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
+        //     resources: [
+        //         `arn:aws:s3:::${AWS_S3_BUCKET_DEV_FRONTEND}/*`,
+        //         `arn:aws:s3:::${AWS_S3_BUCKET_DEV_FRONTEND}`,
+        //         `arn:aws:s3:::${AWS_S3_BUCKET_PROD_FRONTEND}/*`,
+        //         `arn:aws:s3:::${AWS_S3_BUCKET_PROD_FRONTEND}`
+        //     ]
+        // });
 
-        adminRole.addToPolicy(s3AccessPolicy);
+        // adminRole.addToPolicy(s3AccessPolicy);
 
         // Create the high-level CodePipeline
         const pipeline = new CodePipeline(this, "Pipeline", {
             // artifactBucket: artifactBucket,
-            crossAccountKeys: true,
+            // crossAccountKeys: true,
             synth: new ShellStep("Synth", {
                 input: CodePipelineSource.gitHub(
                     `${GITHUB_OWNER}/${GITHUB_CDK_REPO}`,
@@ -78,27 +78,27 @@ export class MyPipelineStack extends Stack {
                 ),
                 commands: ["npm ci", "npm run build", "npx cdk synth"]
             }),
-            crossRegionReplicationBuckets: {
-                [Region.IAD]: s3.Bucket.fromBucketAttributes(
-                    this,
-                    `crossRegionBucket-${Stage.Beta_FE}`,
-                    {
-                        encryptionKey: kmsKey,
-                        bucketArn: AWS_S3_BUCKET_DEV_FRONTEND,
-                        region: Region.IAD
-                    }
-                ),
-                [Region.NRT]: s3.Bucket.fromBucketAttributes(
-                    this,
-                    `crossRegionBucket-${Stage.Prod_NA}`,
-                    {
-                        encryptionKey: kmsKey,
-                        bucketArn: AWS_S3_BUCKET_PROD_FRONTEND,
-                        region: Region.NRT
-                    }
-                )
-            },
-            role: adminRole,
+            // crossRegionReplicationBuckets: {
+            //     [Region.IAD]: s3.Bucket.fromBucketAttributes(
+            //         this,
+            //         `crossRegionBucket-${Stage.Beta_FE}`,
+            //         {
+            //             encryptionKey: kmsKey,
+            //             bucketArn: AWS_S3_BUCKET_DEV_FRONTEND,
+            //             region: Region.IAD
+            //         }
+            //     ),
+            //     [Region.NRT]: s3.Bucket.fromBucketAttributes(
+            //         this,
+            //         `crossRegionBucket-${Stage.Prod_NA}`,
+            //         {
+            //             encryptionKey: kmsKey,
+            //             bucketArn: AWS_S3_BUCKET_PROD_FRONTEND,
+            //             region: Region.NRT
+            //         }
+            //     )
+            // },
+            // role: adminRole,
             codeBuildDefaults: {
                 rolePolicy: [
                     new iam.PolicyStatement({
