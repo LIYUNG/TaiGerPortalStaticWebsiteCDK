@@ -8,7 +8,7 @@ import { Construct } from "constructs";
 // import * as codebuild from "aws-cdk-lib/aws-codebuild";
 // import * as codepipeline from "aws-cdk-lib/aws-codepipeline";
 import {
-    // CodeBuildStep,
+    CodeBuildStep,
     CodePipeline,
     CodePipelineSource,
     // ManualApprovalStep,
@@ -19,7 +19,7 @@ import * as codepipeline_actions from "aws-cdk-lib/aws-codepipeline-actions";
 import * as s3 from "aws-cdk-lib/aws-s3";
 // import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from "aws-cdk-lib/aws-iam";
-import { Region, STAGES, Stage } from "../constants";
+import { Region, STAGES } from "../constants";
 import {
     // AWS_CODEPIPELINE_APPROVER_EMAIL,
     // AWS_S3_BUCKET_DEV_FRONTEND,
@@ -27,7 +27,7 @@ import {
     GITHUB_CDK_REPO,
     GITHUB_OWNER,
     GITHUB_PACKAGE_BRANCH,
-    // GITHUB_REPO,
+    GITHUB_REPO,
     GITHUB_TOKEN
     // PIPELINE_NAME,
     // TENANT_CDK_NAME,
@@ -43,26 +43,29 @@ export class MyPipelineStack extends Stack {
     constructor(scope: Construct, id: string, props?: MyPipelineStackProps) {
         super(scope, id, props);
 
+        if (!props?.s3Buckets![0].s3 || !props?.s3Buckets![1].s3) {
+            throw Error("pipeline crossregion bucket missing");
+        }
         // Create an S3 bucket in the primary region with KMS encryption
-        const artifactBucketBeta = s3.Bucket.fromBucketAttributes(
-            this,
-            "TaiGerPipelineBucketBeta",
-            {
-                bucketName: `taigerpipeline-artifact-${Stage.Beta_FE}`.toLowerCase(),
-                region: Region.IAD,
-                encryptionKey: props?.s3Buckets![0].kmsKey
-            }
-        );
+        // const artifactBucketBeta = s3.Bucket.fromBucketAttributes(
+        //     this,
+        //     "TaiGerPipelineBucketBeta",
+        //     {
+        //         bucketName: `taigerpipeline-artifact-${Stage.Beta_FE}`.toLowerCase(),
+        //         region: Region.IAD,
+        //         encryptionKey: props?.s3Buckets![0].kmsKey
+        //     }
+        // );
 
-        const artifactBucketProd = s3.Bucket.fromBucketAttributes(
-            this,
-            "TaiGerPipelineBucketProd",
-            {
-                bucketName: `taigerpipeline-artifact-${Stage.Prod_NA}`.toLowerCase(),
-                region: Region.NRT,
-                encryptionKey: props?.s3Buckets![1].kmsKey
-            }
-        );
+        // const artifactBucketProd = s3.Bucket.fromBucketAttributes(
+        //     this,
+        //     "TaiGerPipelineBucketProd",
+        //     {
+        //         bucketName: `taigerpipeline-artifact-${Stage.Prod_NA}`.toLowerCase(),
+        //         region: Region.NRT,
+        //         encryptionKey: props?.s3Buckets![1].kmsKey
+        //     }
+        // );
 
         // const artifactBucketProd = new s3.Bucket(this, "TaiGerPipelineBucketProd", {
         //     encryption: s3.BucketEncryption.KMS,
@@ -105,8 +108,8 @@ export class MyPipelineStack extends Stack {
                 commands: ["npm ci", "npm run build", "npx cdk synth"]
             }),
             crossRegionReplicationBuckets: {
-                [Region.IAD]: artifactBucketBeta,
-                [Region.NRT]: artifactBucketProd
+                [Region.IAD]: props.s3Buckets![0].s3,
+                [Region.NRT]: props.s3Buckets![1].s3
             },
             // role: adminRole,
             codeBuildDefaults: {
@@ -120,43 +123,44 @@ export class MyPipelineStack extends Stack {
         });
 
         // Add source steps for both repositories
-        // const sourceStep = CodePipelineSource.gitHub(
-        //     `${GITHUB_OWNER}/${GITHUB_REPO}`,
-        //     GITHUB_PACKAGE_BRANCH,
-        //     {
-        //         authentication: SecretValue.secretsManager(GITHUB_TOKEN),
-        //         trigger: codepipeline_actions.GitHubTrigger.WEBHOOK
-        //     }
-        // );
+        const sourceStep = CodePipelineSource.gitHub(
+            `${GITHUB_OWNER}/${GITHUB_REPO}`,
+            GITHUB_PACKAGE_BRANCH,
+            {
+                authentication: SecretValue.secretsManager(GITHUB_TOKEN),
+                trigger: codepipeline_actions.GitHubTrigger.WEBHOOK
+            }
+        );
 
         // STAGES.forEach(({ stageName, bucketArn, apiDomain, cloudfrontId, env }) => {
-        STAGES.forEach(({ stageName, env }) => {
+        STAGES.forEach(({ stageName, bucketArn, apiDomain, env }) => {
+            // STAGES.forEach(({ stageName, env, apiDomain }) => {
             // Reference existing S3 bucketArn
-            // const existingBucket = s3.Bucket.fromBucketAttributes(
-            //     this,
-            //     `ExistingBucket-${stageName}`,
-            //     { bucketArn, region: env.region }
-            // );-
+            const existingBucket = s3.Bucket.fromBucketAttributes(
+                this,
+                `ExistingBucket-${stageName}`,
+                { bucketArn, region: env.region }
+            );
 
-            // // CodeBuild project
-            // const buildStep = new CodeBuildStep(`Build-${stageName}`, {
-            //     input: sourceStep,
-            //     installCommands: ["cd client", "npm install"],
-            //     commands: ["npm run test", "npm run build"],
-            //     env: {
-            //         REACT_APP_STAGE: stageName,
-            //         REACT_APP_PROD_URL: apiDomain,
-            //         GENERATE_SOURCEMAP: "false",
-            //         CI: "true"
-            //     },
-            //     primaryOutputDirectory: "client/build",
-            //     projectName: `BuildProject-${stageName}`
-            // });
+            // CodeBuild project
+            const buildStep = new CodeBuildStep(`Build-${stageName}`, {
+                input: sourceStep,
+                installCommands: ["cd client", "npm install"],
+                commands: ["npm run test", "npm run build"],
+                env: {
+                    REACT_APP_STAGE: stageName,
+                    REACT_APP_PROD_URL: apiDomain,
+                    GENERATE_SOURCEMAP: "false",
+                    CI: "true"
+                },
+                primaryOutputDirectory: "client/build",
+                projectName: `BuildProject-${stageName}`
+            });
 
-            // const deployStep = new ShellStep(`Deploy-${stageName}`, {
-            //     input: buildStep,
-            //     commands: ["ls", `aws s3 sync . s3://${existingBucket.bucketName}`]
-            // });
+            const deployStep = new ShellStep(`Deploy-${stageName}`, {
+                input: buildStep,
+                commands: ["ls", `aws s3 sync . s3://${existingBucket.bucketName}`]
+            });
 
             // const invalidateCacheStep = new ShellStep(`InvalidateCache-${stageName}`, {
             //     commands: [
@@ -198,11 +202,11 @@ export class MyPipelineStack extends Stack {
                 stageName,
                 env: { region: env.region, account: env.account }
             });
-            // pipeline.addStage(Stage, {
-            //     pre: [buildStep, deployStep],
-            //     post: [invalidateCacheStep] // can also delete the old ec2
-            // });
-            pipeline.addStage(Stage);
+            pipeline.addStage(Stage, {
+                // pre: [],
+                post: [buildStep, deployStep] // can also delete the old ec2
+            });
+            // pipeline.addStage(Stage);
         });
     }
 }
