@@ -1,4 +1,4 @@
-import { Stack, StackProps, SecretValue, RemovalPolicy } from "aws-cdk-lib";
+import { Stack, StackProps, SecretValue, RemovalPolicy, Fn } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import * as kms from "aws-cdk-lib/aws-kms";
 
@@ -19,7 +19,7 @@ import * as codepipeline_actions from "aws-cdk-lib/aws-codepipeline-actions";
 import * as s3 from "aws-cdk-lib/aws-s3";
 // import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from "aws-cdk-lib/aws-iam";
-import { Region, STAGES } from "../constants";
+import { Region, STAGES, Stage } from "../constants";
 import {
     // AWS_CODEPIPELINE_APPROVER_EMAIL,
     // AWS_S3_BUCKET_DEV_FRONTEND,
@@ -41,16 +41,41 @@ export class MyPipelineStack extends Stack {
         super(scope, id, props);
 
         // Create a KMS key
-        const kmsKey = new kms.Key(this, "KMSKey", {
-            enableKeyRotation: true
-        });
+
+        // Import the KMS Key by its ARN
+        const kmsKeyBetaArn = Fn.importValue(`taigerpipeline-artifact-kms-${Stage.Beta_FE}`);
+        const kmsKeyBeta = kms.Key.fromKeyArn(
+            this,
+            `taigerpipeline-artifact-kms-${Stage.Beta_FE}`,
+            kmsKeyBetaArn
+        );
+        const kmsKeyProdArn = Fn.importValue(`taigerpipeline-artifact-kms-${Stage.Prod_NA}`);
+        const kmsKeyProd = kms.Key.fromKeyArn(
+            this,
+            `taigerpipeline-artifact-kms-${Stage.Prod_NA}`,
+            kmsKeyProdArn
+        );
 
         // Create an S3 bucket in the primary region with KMS encryption
-        const artifactBucketBeta = new s3.Bucket(this, "TaiGerPipelineBucketBeta", {
-            encryption: s3.BucketEncryption.KMS,
-            encryptionKey: kmsKey,
-            removalPolicy: RemovalPolicy.DESTROY
-        });
+        const artifactBucketBeta = s3.Bucket.fromBucketAttributes(
+            this,
+            "TaiGerPipelineBucketBeta",
+            {
+                bucketName: `taigerpipeline-artifact-${Stage.Beta_FE}`.toLowerCase(),
+                region: Region.IAD,
+                encryptionKey: kmsKeyBeta
+            }
+        );
+
+        const artifactBucketProd = s3.Bucket.fromBucketAttributes(
+            this,
+            "TaiGerPipelineBucketProd",
+            {
+                bucketName: `taigerpipeline-artifact-${Stage.Prod_NA}`.toLowerCase(),
+                region: Region.NRT,
+                encryptionKey: kmsKeyProd
+            }
+        );
 
         // const artifactBucketProd = new s3.Bucket(this, "TaiGerPipelineBucketProd", {
         //     encryption: s3.BucketEncryption.KMS,
@@ -93,7 +118,8 @@ export class MyPipelineStack extends Stack {
                 commands: ["npm ci", "npm run build", "npx cdk synth"]
             }),
             crossRegionReplicationBuckets: {
-                [Region.NRT]: artifactBucketBeta
+                [Region.IAD]: artifactBucketBeta,
+                [Region.NRT]: artifactBucketProd
             },
             // role: adminRole,
             codeBuildDefaults: {
