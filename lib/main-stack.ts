@@ -7,6 +7,9 @@ import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as logs from "aws-cdk-lib/aws-logs";
+import * as sns from "aws-cdk-lib/aws-sns";
+import * as subscriptions from "aws-cdk-lib/aws-sns-subscriptions";
+import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as certificatemanager from "aws-cdk-lib/aws-certificatemanager";
 import {
     API_BETA_DOMAINNAME,
@@ -147,7 +150,40 @@ export class MainStack extends cdk.Stack {
             userData: userData,
             vpcSubnets: publicSubnets,
             instanceName: new Date().toISOString()
-            // TODO: Security group, key pair, etc. can be added here as per your requirements
+            // TODO:  can be added here as per your requirements
+        });
+
+        // Define the SNS topic
+        const alarmTopic = new sns.Topic(this, `AlarmTopic-${stageName}`, {
+            displayName: `Alarm notifications for ${stageName}`
+        });
+
+        alarmTopic.addSubscription(new subscriptions.EmailSubscription("taiger.leoc@gmail.com"));
+
+        // Define the CloudWatch alarm for NetworkIn metric
+        const networkInAlarm = new cloudwatch.Alarm(this, `NetworkInAlarm-${stageName}`, {
+            metric: new cloudwatch.Metric({
+                namespace: "AWS/EC2",
+                metricName: "NetworkIn",
+                dimensionsMap: {
+                    InstanceId: instance.instanceId
+                },
+                statistic: "sum",
+                period: cdk.Duration.minutes(5)
+            }),
+            threshold: 5000,
+            evaluationPeriods: 1,
+            comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
+            alarmDescription: `Alarm when NetworkIn is less than or equal to 5000 for ${stageName}`,
+            alarmName: `NetworkInAlarm-${stageName}`,
+            datapointsToAlarm: 1
+        });
+
+        // Add the SNS topic as an alarm action
+        networkInAlarm.addAlarmAction({
+            bind: () => ({
+                alarmActionArn: alarmTopic.topicArn
+            })
         });
 
         // Define the S3 bucket (replace with your actual bucket details)
