@@ -220,6 +220,20 @@ export class MainStack extends cdk.Stack {
             domainName: DOMAIN_NAME // Your domain name
         });
 
+        // Define a custom cache policy
+        const cachePolicy = new cloudfront.CachePolicy(
+            this,
+            `CustomCachePolicy-${stageName}`,
+            {
+                cachePolicyName: `CustomCachePolicy-${stageName}`,
+                queryStringBehavior: cloudfront.CacheQueryStringBehavior.allowList("q"),
+                headerBehavior: cloudfront.CacheHeaderBehavior.none(),
+                cookieBehavior: cloudfront.CacheCookieBehavior.allowList("x-auth"),
+                enableAcceptEncodingGzip: true,
+                enableAcceptEncodingBrotli: true
+            }
+        );
+
         const ec2Origin = new origins.HttpOrigin(instance.instancePublicDnsName, {
             httpPort: 80,
             protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
@@ -241,14 +255,14 @@ export class MainStack extends cdk.Stack {
                     origin: ec2Origin,
                     viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
                     allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-                    cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+                    cachePolicy: cachePolicy,
                     compress: true
                 },
                 "/auth/*": {
                     origin: ec2Origin,
                     viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
                     allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-                    cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+                    cachePolicy: cachePolicy,
                     compress: true
                 },
                 "/images/*": {
