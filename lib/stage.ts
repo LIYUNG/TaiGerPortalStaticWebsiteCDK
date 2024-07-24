@@ -6,6 +6,7 @@ import { MainStack } from "./main-stack";
 interface DeploymentkProps extends StageProps {
     stageName: string;
     bucketArn?: string;
+    isProd: boolean;
 }
 
 export class Deployment extends Stage {
@@ -15,6 +16,7 @@ export class Deployment extends Stage {
         new MainStack(this, `MainStack-${props.stageName}`, {
             stageName: props?.stageName,
             bucketArn: props?.bucketArn,
+            isProd: props?.isProd,
             env: props.env,
             description: "Create EC2, S3, Cloudfront"
         });

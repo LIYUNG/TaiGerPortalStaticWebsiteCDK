@@ -133,7 +133,7 @@ export class MyPipelineStack extends Stack {
         );
 
         // STAGES.forEach(({ stageName, bucketArn, apiDomain, cloudfrontId, env }) => {
-        STAGES.forEach(({ stageName, bucketArn, apiDomain, env }) => {
+        STAGES.forEach(({ stageName, bucketArn, apiDomain, isProd, env }) => {
             // STAGES.forEach(({ stageName, env, apiDomain }) => {
             // Reference existing S3 bucketArn
             const existingBucket = s3.Bucket.fromBucketAttributes(
@@ -200,6 +200,7 @@ export class MyPipelineStack extends Stack {
             // Add stages to the pipeline
             const Stage = new Deployment(this, `BuildDeployStage-${stageName}`, {
                 stageName,
+                isProd,
                 env: { region: env.region, account: env.account }
             });
             pipeline.addStage(Stage, {

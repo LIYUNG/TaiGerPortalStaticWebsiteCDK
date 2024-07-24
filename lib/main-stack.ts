@@ -22,6 +22,7 @@ import { Region, Stage } from "../constants";
 interface MainStackProps extends cdk.StackProps {
     stageName?: string;
     bucketArn?: string;
+    isProd: boolean;
 }
 export class MainStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props?: MainStackProps) {
@@ -29,21 +30,22 @@ export class MainStack extends cdk.Stack {
 
         // Ensure props is defined and destructure safely
         const stageName = props?.stageName ?? Stage.Beta_FE;
+        const isProd = props?.isProd ?? false;
         const bucketArn = props?.bucketArn ?? AWS_S3_BUCKET_DEV_FRONTEND;
         const env = props?.env;
 
         // Create a CloudWatch Log Group
         const logGroup = new logs.LogGroup(this, `TaiGerLogGroup-${stageName}`, {
             logGroupName: `/aws/taiger-portal-log-group-${stageName}`,
-            retention: logs.RetentionDays.ONE_WEEK, // Set the retention period as needed
-            removalPolicy: cdk.RemovalPolicy.DESTROY // Automatically delete log group on stack deletion
+            retention: logs.RetentionDays.SIX_MONTHS, // Set the retention period as needed
+            removalPolicy: cdk.RemovalPolicy.RETAIN // Automatically delete log group on stack deletion
         });
 
         // Create a CloudWatch Log Stream
         new logs.LogStream(this, `MyLogStream-${stageName}`, {
             logGroup: logGroup,
             logStreamName: `taiger-portal-server-stream-${stageName}`,
-            removalPolicy: cdk.RemovalPolicy.DESTROY // Automatically delete log stream on stack deletion
+            removalPolicy: cdk.RemovalPolicy.RETAIN // Automatically delete log stream on stack deletion
         });
 
         // Get the existing VPC
@@ -72,8 +74,11 @@ export class MainStack extends cdk.Stack {
             "sudo yum update -y",
             "sudo yum install -y awscli",
             "mkdir taiger_express_server", //   create folder
-            "cd taiger_express_server", //Download the file from S3 bucket
-            "aws s3 sync s3://taiger-file-storage-production-backend-server .",
+            "cd taiger_express_server", // Download the file from S3 bucket
+            "aws s3 sync s3://taiger-file-storage-production-backend-server .", // Download server code
+            isProd
+                ? "aws s3 sync s3://taiger-environment-variables/.env.production ."
+                : "aws s3 sync s3://taiger-environment-variables/.env.development .", // Download environment file
             "curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -",
             "sudo yum install -y nodejs",
             "cd /taiger_express_server/python/TaiGerTranscriptAnalyzerJS",
@@ -84,7 +89,7 @@ export class MainStack extends cdk.Stack {
             "sudo npm install",
             "sudo npm install pm2 -g",
             "sudo pm2 startup", // Start the Node.js server
-            "sudo pm2 start npm -- start",
+            isProd ? "sudo pm2 start npm -- start" : "sudo pm2 start npm -- run-script dev",
             "sudo pm2 save"
         );
         // Import the existing IAM role using its ARN
@@ -221,18 +226,14 @@ export class MainStack extends cdk.Stack {
         });
 
         // Define a custom cache policy
-        const cachePolicy = new cloudfront.CachePolicy(
-            this,
-            `CustomCachePolicy-${stageName}`,
-            {
-                cachePolicyName: `CustomCachePolicy-${stageName}`,
-                queryStringBehavior: cloudfront.CacheQueryStringBehavior.allowList("q"),
-                headerBehavior: cloudfront.CacheHeaderBehavior.none(),
-                cookieBehavior: cloudfront.CacheCookieBehavior.allowList("x-auth"),
-                enableAcceptEncodingGzip: true,
-                enableAcceptEncodingBrotli: true
-            }
-        );
+        const cachePolicy = new cloudfront.CachePolicy(this, `CustomCachePolicy-${stageName}`, {
+            cachePolicyName: `CustomCachePolicy-${stageName}`,
+            queryStringBehavior: cloudfront.CacheQueryStringBehavior.allowList("q"),
+            headerBehavior: cloudfront.CacheHeaderBehavior.none(),
+            cookieBehavior: cloudfront.CacheCookieBehavior.allowList("x-auth"),
+            enableAcceptEncodingGzip: true,
+            enableAcceptEncodingBrotli: true
+        });
 
         const ec2Origin = new origins.HttpOrigin(instance.instancePublicDnsName, {
             httpPort: 80,
