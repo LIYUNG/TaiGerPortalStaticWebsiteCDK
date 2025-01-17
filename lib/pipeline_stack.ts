@@ -9,7 +9,7 @@ import {
 } from "aws-cdk-lib/pipelines";
 
 import * as codepipeline_actions from "aws-cdk-lib/aws-codepipeline-actions";
-import * as s3 from "aws-cdk-lib/aws-s3";
+// import * as s3 from "aws-cdk-lib/aws-s3";
 import * as iam from "aws-cdk-lib/aws-iam";
 import { Region, STAGES } from "../constants";
 import {

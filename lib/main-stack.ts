@@ -12,7 +12,7 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 // import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as certificatemanager from "aws-cdk-lib/aws-certificatemanager";
 import { API_BETA_DOMAINNAME, API_PROD_DOMAINNAME, DOMAIN_NAME } from "../configuration";
-import { Region, Stage } from "../constants";
+import { Region } from "../constants";
 
 interface MainStackProps extends cdk.StackProps {
     stageName: string;
