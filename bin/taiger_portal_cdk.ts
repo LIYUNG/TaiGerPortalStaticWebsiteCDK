@@ -23,7 +23,7 @@ const s3Prod = new S3Stack(app, "S3StackProd", {
 new MySlackboteStack(app, "MySlackboteStack", {
     env: { region: Region.IAD, account: AWS_ACCOUNT }
 });
-const myPipelineStack = new MyPipelineStack(app, "MyPipelineStack", {
+const myPipelineStack = new MyPipelineStack(app, "TaiGerPortalStaticWebsitePipelineStack", {
     env: { region: Region.IAD, account: AWS_ACCOUNT },
     s3Buckets: [s3Beta, s3Prod],
     crossRegionReferences: true

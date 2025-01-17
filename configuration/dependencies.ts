@@ -6,7 +6,7 @@ export const TENANT_CDK_NAME = "TaiGerCDK";
 export const GITHUB_TOKEN =
     "arn:aws:secretsmanager:us-east-1:669131042313:secret:beta/taigerportal-Hm1SLX";
 export const GITHUB_REPO = "TaiGer_Portal";
-export const GITHUB_CDK_REPO = "TaiGer_PortalCDK";
+export const GITHUB_CDK_REPO = "TaiGerPortalStaticWebsiteCDK";
 export const GITHUB_OWNER = "LIYUNG";
 export const GITHUB_PACKAGE_BRANCH = "main";
 
@@ -20,12 +20,10 @@ export const DOMAIN_NAME = "taigerconsultancy-portal.com";
 export const AWS_S3_BUCKET_DEV_FRONTEND = "arn:aws:s3:::taiger-file-storage-development-website";
 export const API_BETA_DOMAINNAME = `test.${DOMAIN_NAME}`;
 export const API_BETA_DOMAIN = `https://${API_BETA_DOMAINNAME}`;
-export const CLOUDFRONT_ID_DEV = "E140WBRXPYSUB4";
 
 // Prod
 export const AWS_S3_BUCKET_PROD_FRONTEND = "arn:aws:s3:::taiger-file-storage-production-website";
 export const API_PROD_DOMAINNAME = `prod.${DOMAIN_NAME}`;
 export const API_PROD_DOMAIN = `https://${API_PROD_DOMAINNAME}`;
-export const CLOUDFRONT_ID_PROD = "E31WYFO0IE8GZL";
 
 export const AWS_CODEPIPELINE_APPROVER_EMAIL = "taiger.leoc@gmail.com";
