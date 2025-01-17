@@ -187,12 +187,10 @@ export class MainStack extends cdk.Stack {
 
         // S3 Bucket for static website hosting
         const websiteBucket = new s3.Bucket(this, `TaiGer-Frontend-Bucket-${stageName}`, {
-            accessControl: s3.BucketAccessControl.PRIVATE,
             bucketName: props.staticAssetsBucketName,
             enforceSSL: true,
             websiteIndexDocument: "index.html",
             websiteErrorDocument: "index.html",
-            blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL, // Block public access since CloudFront will handle it
             removalPolicy: cdk.RemovalPolicy.DESTROY, // Automatically delete bucket during stack teardown (optional)
             autoDeleteObjects: true // Automatically delete objects during stack teardown (optional)
         });
