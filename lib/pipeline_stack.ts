@@ -13,6 +13,8 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import * as iam from "aws-cdk-lib/aws-iam";
 import { Region, STAGES } from "../constants";
 import {
+    AWS_S3_BUCKET_DEV_FRONTEND,
+    AWS_S3_BUCKET_PROD_FRONTEND,
     GITHUB_CDK_REPO,
     GITHUB_OWNER,
     GITHUB_PACKAGE_BRANCH,
@@ -59,24 +61,24 @@ export class MyPipelineStack extends Stack {
         //     removalPolicy: RemovalPolicy.DESTROY
         // });
 
-        // // Create the IAM Role with Admin permissions
-        // const adminRole = new iam.Role(this, "PipelineAdminRole", {
-        //     assumedBy: new iam.ServicePrincipal("codepipeline.amazonaws.com"),
-        //     managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName("AdministratorAccess")]
-        // });
+        // Create the IAM Role with Admin permissions
+        const adminRole = new iam.Role(this, "PipelineAdminRole", {
+            assumedBy: new iam.ServicePrincipal("codepipeline.amazonaws.com"),
+            managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName("AdministratorAccess")]
+        });
 
-        // const s3AccessPolicy = new iam.PolicyStatement({
-        //     effect: iam.Effect.ALLOW,
-        //     actions: ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
-        //     resources: [
-        //         `arn:aws:s3:::${AWS_S3_BUCKET_DEV_FRONTEND}/*`,
-        //         `arn:aws:s3:::${AWS_S3_BUCKET_DEV_FRONTEND}`,
-        //         `arn:aws:s3:::${AWS_S3_BUCKET_PROD_FRONTEND}/*`,
-        //         `arn:aws:s3:::${AWS_S3_BUCKET_PROD_FRONTEND}`
-        //     ]
-        // });
+        const s3AccessPolicy = new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
+            resources: [
+                `arn:aws:s3:::${AWS_S3_BUCKET_DEV_FRONTEND}/*`,
+                `arn:aws:s3:::${AWS_S3_BUCKET_DEV_FRONTEND}`,
+                `arn:aws:s3:::${AWS_S3_BUCKET_PROD_FRONTEND}/*`,
+                `arn:aws:s3:::${AWS_S3_BUCKET_PROD_FRONTEND}`
+            ]
+        });
 
-        // adminRole.addToPolicy(s3AccessPolicy);
+        adminRole.addToPolicy(s3AccessPolicy);
 
         // Create the high-level CodePipeline
         const pipeline = new CodePipeline(this, "Pipeline", {
@@ -97,7 +99,7 @@ export class MyPipelineStack extends Stack {
                 [Region.IAD]: props.s3Buckets![0].s3,
                 [Region.NRT]: props.s3Buckets![1].s3
             },
-            // role: adminRole,
+            role: adminRole,
             codeBuildDefaults: {
                 rolePolicy: [
                     new iam.PolicyStatement({
