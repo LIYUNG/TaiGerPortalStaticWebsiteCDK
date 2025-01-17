@@ -4,7 +4,7 @@ import * as route53 from "aws-cdk-lib/aws-route53";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 // import * as ec2 from "aws-cdk-lib/aws-ec2";
-import * as iam from "aws-cdk-lib/aws-iam";
+// import * as iam from "aws-cdk-lib/aws-iam";
 import * as s3 from "aws-cdk-lib/aws-s3";
 // import * as logs from "aws-cdk-lib/aws-logs";
 // import * as sns from "aws-cdk-lib/aws-sns";
@@ -187,7 +187,9 @@ export class MainStack extends cdk.Stack {
 
         // S3 Bucket for static website hosting
         const websiteBucket = new s3.Bucket(this, `TaiGer-Frontend-Bucket-${stageName}`, {
+            accessControl: s3.BucketAccessControl.PRIVATE,
             bucketName: props.staticAssetsBucketName,
+            enforceSSL: true,
             websiteIndexDocument: "index.html",
             websiteErrorDocument: "index.html",
             blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL, // Block public access since CloudFront will handle it
@@ -195,21 +197,13 @@ export class MainStack extends cdk.Stack {
             autoDeleteObjects: true // Automatically delete objects during stack teardown (optional)
         });
 
-        // Create an Origin Access Identity (OAI)
-        const oai = new cloudfront.OriginAccessIdentity(this, `OAI-${stageName}`, {
-            comment: `OAI for ${stageName} CloudFront distribution`
+        const oac = new cloudfront.S3OriginAccessControl(this, `OAC-${stageName}`, {
+            signing: cloudfront.Signing.SIGV4_NO_OVERRIDE
         });
 
-        // Grant the OAI read access to the bucket
-        const bucketPolicy = new iam.PolicyStatement({
-            actions: ["s3:GetObject"],
-            resources: [`${websiteBucket.bucketArn}/*`],
-            principals: [
-                new iam.CanonicalUserPrincipal(oai.cloudFrontOriginAccessIdentityS3CanonicalUserId)
-            ]
+        const s3Origin = origins.S3BucketOrigin.withOriginAccessControl(websiteBucket, {
+            originAccessControl: oac
         });
-
-        websiteBucket.addToResourcePolicy(bucketPolicy);
 
         // Define the ACM certificate
         const certificate = certificatemanager.Certificate.fromCertificateArn(
@@ -246,7 +240,7 @@ export class MainStack extends cdk.Stack {
             `TaiGerPortalStaticWebsiteDistribution-${stageName}`,
             {
                 defaultBehavior: {
-                    origin: new origins.S3Origin(websiteBucket, { originAccessIdentity: oai }),
+                    origin: s3Origin,
                     viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
                     allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
                     cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
@@ -291,7 +285,6 @@ export class MainStack extends cdk.Stack {
                 ],
                 domainNames: [domain],
                 certificate: certificate,
-                defaultRootObject: "index.html",
                 priceClass: cloudfront.PriceClass.PRICE_CLASS_ALL
             }
         );
