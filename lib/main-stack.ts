@@ -11,16 +11,12 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 // import * as subscriptions from "aws-cdk-lib/aws-sns-subscriptions";
 // import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as certificatemanager from "aws-cdk-lib/aws-certificatemanager";
-import {
-    API_BETA_DOMAINNAME,
-    API_PROD_DOMAINNAME,
-    DOMAIN_NAME
-} from "../configuration";
+import { API_BETA_DOMAINNAME, API_PROD_DOMAINNAME, DOMAIN_NAME } from "../configuration";
 import { Region, Stage } from "../constants";
 
 interface MainStackProps extends cdk.StackProps {
     stageName: string;
-    bucketArn: string;
+    staticAssetsBucketName: string;
     isProd: boolean;
 }
 export class MainStack extends cdk.Stack {
@@ -30,7 +26,6 @@ export class MainStack extends cdk.Stack {
         // Ensure props is defined and destructure safely
         const stageName = props.stageName;
         // const isProd = props.isProd;
-        const bucketArn = props.bucketArn;
         const env = props?.env;
 
         // // Create a CloudWatch Log Group
@@ -190,10 +185,14 @@ export class MainStack extends cdk.Stack {
         //     })
         // });
 
-        // Define the S3 bucket (replace with your actual bucket details)
-        const bucket = s3.Bucket.fromBucketAttributes(this, `ExistingBucket-${stageName}`, {
-            ...env,
-            bucketArn
+        // S3 Bucket for static website hosting
+        const websiteBucket = new s3.Bucket(this, `TaiGer-Frontend-Bucket-${stageName}`, {
+            bucketName: props.staticAssetsBucketName,
+            websiteIndexDocument: "index.html",
+            websiteErrorDocument: "index.html",
+            blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL, // Block public access since CloudFront will handle it
+            removalPolicy: cdk.RemovalPolicy.DESTROY, // Automatically delete bucket during stack teardown (optional)
+            autoDeleteObjects: true // Automatically delete objects during stack teardown (optional)
         });
 
         // Create an Origin Access Identity (OAI)
@@ -204,13 +203,13 @@ export class MainStack extends cdk.Stack {
         // Grant the OAI read access to the bucket
         const bucketPolicy = new iam.PolicyStatement({
             actions: ["s3:GetObject"],
-            resources: [`${bucketArn}/*`],
+            resources: [`${websiteBucket.bucketArn}/*`],
             principals: [
                 new iam.CanonicalUserPrincipal(oai.cloudFrontOriginAccessIdentityS3CanonicalUserId)
             ]
         });
 
-        bucket.addToResourcePolicy(bucketPolicy);
+        websiteBucket.addToResourcePolicy(bucketPolicy);
 
         // Define the ACM certificate
         const certificate = certificatemanager.Certificate.fromCertificateArn(
@@ -247,7 +246,7 @@ export class MainStack extends cdk.Stack {
             `TaiGerPortalStaticWebsiteDistribution-${stageName}`,
             {
                 defaultBehavior: {
-                    origin: new origins.S3Origin(bucket, { originAccessIdentity: oai }),
+                    origin: new origins.S3Origin(websiteBucket, { originAccessIdentity: oai }),
                     viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
                     allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
                     cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
@@ -292,6 +291,7 @@ export class MainStack extends cdk.Stack {
                 ],
                 domainNames: [domain],
                 certificate: certificate,
+                defaultRootObject: "index.html",
                 priceClass: cloudfront.PriceClass.PRICE_CLASS_ALL
             }
         );

@@ -123,14 +123,8 @@ export class MyPipelineStack extends Stack {
         );
 
         // STAGES.forEach(({ stageName, bucketArn, apiDomain, cloudfrontId, env }) => {
-        STAGES.forEach(({ stageName, bucketArn, apiDomain, isProd, env }) => {
+        STAGES.forEach(({ stageName, staticAssetsBucketName, apiDomain, isProd, env }) => {
             // STAGES.forEach(({ stageName, env, apiDomain }) => {
-            // Reference existing S3 bucketArn
-            const existingBucket = s3.Bucket.fromBucketAttributes(
-                this,
-                `ExistingBucket-${stageName}`,
-                { bucketArn, region: env.region }
-            );
 
             // CodeBuild project
             const buildStep = new CodeBuildStep(`Build-FrontEnd-${stageName}`, {
@@ -149,7 +143,7 @@ export class MyPipelineStack extends Stack {
 
             const deployStep = new ShellStep(`Deploy-FrontEnd-${stageName}`, {
                 input: buildStep,
-                commands: ["ls", `aws s3 sync . s3://${existingBucket.bucketName}`]
+                commands: ["ls", `aws s3 sync . s3://${staticAssetsBucketName}`]
             });
 
             // const invalidateCacheStep = new ShellStep(`InvalidateCache-${stageName}`, {
@@ -192,7 +186,7 @@ export class MyPipelineStack extends Stack {
                 stageName,
                 isProd,
                 env: { region: env.region, account: env.account },
-                bucketArn: existingBucket.bucketArn
+                staticAssetsBucketName
             });
             pipeline.addStage(Stage, {
                 // pre: [],
