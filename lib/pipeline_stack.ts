@@ -1,12 +1,5 @@
 import { Stack, StackProps, SecretValue } from "aws-cdk-lib";
 import { Construct } from "constructs";
-// import * as kms from "aws-cdk-lib/aws-kms";
-
-// import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
-// import * as cloudwatch_actions from "aws-cdk-lib/aws-cloudwatch-actions";
-// import * as sns from "aws-cdk-lib/aws-sns";
-// import * as codebuild from "aws-cdk-lib/aws-codebuild";
-// import * as codepipeline from "aws-cdk-lib/aws-codepipeline";
 import {
     CodeBuildStep,
     CodePipeline,
@@ -17,21 +10,14 @@ import {
 
 import * as codepipeline_actions from "aws-cdk-lib/aws-codepipeline-actions";
 import * as s3 from "aws-cdk-lib/aws-s3";
-// import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from "aws-cdk-lib/aws-iam";
 import { Region, STAGES } from "../constants";
 import {
-    // AWS_CODEPIPELINE_APPROVER_EMAIL,
-    // AWS_S3_BUCKET_DEV_FRONTEND,
-    // AWS_S3_BUCKET_PROD_FRONTEND,
     GITHUB_CDK_REPO,
     GITHUB_OWNER,
     GITHUB_PACKAGE_BRANCH,
     GITHUB_REPO,
     GITHUB_TOKEN
-    // PIPELINE_NAME,
-    // TENANT_CDK_NAME,
-    // TENANT_NAME
 } from "../configuration";
 import { Deployment } from "./stage";
 import { S3Stack } from "./s3_stack";
