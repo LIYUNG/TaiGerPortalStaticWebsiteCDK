@@ -123,76 +123,79 @@ export class MyPipelineStack extends Stack {
         );
 
         // STAGES.forEach(({ stageName, bucketArn, apiDomain, cloudfrontId, env }) => {
-        STAGES.forEach(({ stageName, staticAssetsBucketName, apiDomain, isProd, env }) => {
-            // STAGES.forEach(({ stageName, env, apiDomain }) => {
+        STAGES.forEach(
+            ({ stageName, staticAssetsBucketName, apiDomain, tenantId, isProd, env }) => {
+                // STAGES.forEach(({ stageName, env, apiDomain }) => {
 
-            // CodeBuild project
-            const buildStep = new CodeBuildStep(`Build-FrontEnd-${stageName}`, {
-                input: sourceStep,
-                installCommands: ["cd client", "npm install"],
-                commands: ["npm run test", "npm run build"],
-                env: {
-                    REACT_APP_STAGE: stageName,
-                    REACT_APP_PROD_URL: apiDomain,
-                    GENERATE_SOURCEMAP: "false",
-                    CI: "true"
-                },
-                primaryOutputDirectory: "client/build",
-                projectName: `BuildProject-${stageName}`
-            });
+                // CodeBuild project
+                const buildStep = new CodeBuildStep(`Build-FrontEnd-${stageName}`, {
+                    input: sourceStep,
+                    installCommands: ["cd client", "npm install"],
+                    commands: ["npm run test", "npm run build"],
+                    env: {
+                        REACT_APP_STAGE: stageName,
+                        REACT_APP_PROD_URL: apiDomain,
+                        REACT_APP_TENANT_ID: tenantId,
+                        GENERATE_SOURCEMAP: "false",
+                        CI: "true"
+                    },
+                    primaryOutputDirectory: "client/build",
+                    projectName: `BuildProject-${stageName}`
+                });
 
-            const deployStep = new ShellStep(`Deploy-FrontEnd-${stageName}`, {
-                input: buildStep,
-                commands: ["ls", `aws s3 sync . s3://${staticAssetsBucketName}`]
-            });
+                const deployStep = new ShellStep(`Deploy-FrontEnd-${stageName}`, {
+                    input: buildStep,
+                    commands: ["ls", `aws s3 sync . s3://${staticAssetsBucketName}`]
+                });
 
-            // const invalidateCacheStep = new ShellStep(`InvalidateCache-${stageName}`, {
-            //     commands: [
-            //         `aws cloudfront create-invalidation --distribution-id ${cloudfrontId} --paths "/*"`
-            //     ]
-            // });
+                // const invalidateCacheStep = new ShellStep(`InvalidateCache-${stageName}`, {
+                //     commands: [
+                //         `aws cloudfront create-invalidation --distribution-id ${cloudfrontId} --paths "/*"`
+                //     ]
+                // });
 
-            // const snsDeployFailedTopic = new sns.Topic(this, `${stageName}-DeployFailedTopic`, {
-            //     displayName: `DeployFailedSTopic-${stageName}`
-            // });
+                // const snsDeployFailedTopic = new sns.Topic(this, `${stageName}-DeployFailedTopic`, {
+                //     displayName: `DeployFailedSTopic-${stageName}`
+                // });
 
-            // TODO: add slack endpoint
+                // TODO: add slack endpoint
 
-            // new cloudwatch.Alarm(this, `${stageName}-DeployFailedAlarm`, {
-            //     alarmName: `Deploy-${stageName}-Alarm`,
-            //     metric: new cloudwatch.Metric({
-            //         namespace: "AWS/CodePipeline",
-            //         metricName: "ActionExecution",
-            //         dimensionsMap: {
-            //             PipelineName: pipeline.pipelineName,
-            //             StageName: "Deploy",
-            //             ActionName: deployAction.actionProperties.actionName
-            //         },
-            //         statistic: "Sum",
-            //         period: Duration.minutes(1)
-            //     }),
-            //     threshold: 1, // Example threshold for failure
-            //     evaluationPeriods: 1,
-            //     comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD
-            // }).addAlarmAction(new cloudwatch_actions.SnsAction(snsDeployFailedTopic));
+                // new cloudwatch.Alarm(this, `${stageName}-DeployFailedAlarm`, {
+                //     alarmName: `Deploy-${stageName}-Alarm`,
+                //     metric: new cloudwatch.Metric({
+                //         namespace: "AWS/CodePipeline",
+                //         metricName: "ActionExecution",
+                //         dimensionsMap: {
+                //             PipelineName: pipeline.pipelineName,
+                //             StageName: "Deploy",
+                //             ActionName: deployAction.actionProperties.actionName
+                //         },
+                //         statistic: "Sum",
+                //         period: Duration.minutes(1)
+                //     }),
+                //     threshold: 1, // Example threshold for failure
+                //     evaluationPeriods: 1,
+                //     comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD
+                // }).addAlarmAction(new cloudwatch_actions.SnsAction(snsDeployFailedTopic));
 
-            // // Manual approval action
-            // const approvalStep = new ManualApprovalStep(`Approval-${stageName}`, {
-            //     email: AWS_CODEPIPELINE_APPROVER_EMAIL
-            // });
+                // // Manual approval action
+                // const approvalStep = new ManualApprovalStep(`Approval-${stageName}`, {
+                //     email: AWS_CODEPIPELINE_APPROVER_EMAIL
+                // });
 
-            // Add stages to the pipeline
-            const Stage = new Deployment(this, `BuildDeployStage-${stageName}`, {
-                stageName,
-                isProd,
-                env: { region: env.region, account: env.account },
-                staticAssetsBucketName
-            });
-            pipeline.addStage(Stage, {
-                // pre: [],
-                post: [buildStep, deployStep] // can also delete the old ec2
-            });
-            // pipeline.addStage(Stage);
-        });
+                // Add stages to the pipeline
+                const Stage = new Deployment(this, `BuildDeployStage-${stageName}`, {
+                    stageName,
+                    isProd,
+                    env: { region: env.region, account: env.account },
+                    staticAssetsBucketName
+                });
+                pipeline.addStage(Stage, {
+                    // pre: [],
+                    post: [buildStep, deployStep] // can also delete the old ec2
+                });
+                // pipeline.addStage(Stage);
+            }
+        );
     }
 }

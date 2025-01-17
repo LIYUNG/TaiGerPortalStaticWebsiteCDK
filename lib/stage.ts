@@ -18,7 +18,7 @@ export class Deployment extends Stage {
             staticAssetsBucketName: props.staticAssetsBucketName,
             isProd: props?.isProd,
             env: props.env,
-            description: "Create EC2, S3, Cloudfront"
+            description: "Create S3, Cloudfront"
         });
     }
 }
