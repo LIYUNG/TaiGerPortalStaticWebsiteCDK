@@ -12,7 +12,7 @@ export const GITHUB_PACKAGE_BRANCH = "main";
 
 // AWS
 //// Pipeline
-export const PIPELINE_NAME = "TaiGer_Portal-Frontend-Pipeline";
+export const PIPELINE_NAME = "TaiGerPortalFrontendPipeline";
 
 export const AWS_ACCOUNT = "669131042313";
 export const DOMAIN_NAME = "taigerconsultancy-portal.com";

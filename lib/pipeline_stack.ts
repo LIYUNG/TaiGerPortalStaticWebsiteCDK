@@ -19,7 +19,8 @@ import {
     GITHUB_OWNER,
     GITHUB_PACKAGE_BRANCH,
     GITHUB_REPO,
-    GITHUB_TOKEN
+    GITHUB_TOKEN,
+    PIPELINE_NAME
 } from "../configuration";
 import { Deployment } from "./stage";
 import { S3Stack } from "./s3_stack";
@@ -81,8 +82,9 @@ export class MyPipelineStack extends Stack {
         adminRole.addToPolicy(s3AccessPolicy);
 
         // Create the high-level CodePipeline
-        const pipeline = new CodePipeline(this, "Pipeline", {
+        const pipeline = new CodePipeline(this, `${PIPELINE_NAME}`, {
             // artifactBucket: artifactBucket,
+            pipelineName: `${PIPELINE_NAME}`,
             crossAccountKeys: true,
             synth: new ShellStep("Synth", {
                 input: CodePipelineSource.gitHub(
@@ -131,7 +133,7 @@ export class MyPipelineStack extends Stack {
             );
 
             // CodeBuild project
-            const buildStep = new CodeBuildStep(`Build-${stageName}`, {
+            const buildStep = new CodeBuildStep(`Build-FrontEnd-${stageName}`, {
                 input: sourceStep,
                 installCommands: ["cd client", "npm install"],
                 commands: ["npm run test", "npm run build"],
@@ -145,7 +147,7 @@ export class MyPipelineStack extends Stack {
                 projectName: `BuildProject-${stageName}`
             });
 
-            const deployStep = new ShellStep(`Deploy-${stageName}`, {
+            const deployStep = new ShellStep(`Deploy-FrontEnd-${stageName}`, {
                 input: buildStep,
                 commands: ["ls", `aws s3 sync . s3://${existingBucket.bucketName}`]
             });
@@ -189,7 +191,8 @@ export class MyPipelineStack extends Stack {
             const Stage = new Deployment(this, `BuildDeployStage-${stageName}`, {
                 stageName,
                 isProd,
-                env: { region: env.region, account: env.account }
+                env: { region: env.region, account: env.account },
+                bucketArn: existingBucket.bucketArn
             });
             pipeline.addStage(Stage, {
                 // pre: [],

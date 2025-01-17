@@ -5,7 +5,7 @@ import { MainStack } from "./main-stack";
 // Main deployment setup. Collection of the stacks and deployment sequence
 interface DeploymentkProps extends StageProps {
     stageName: string;
-    bucketArn?: string;
+    bucketArn: string;
     isProd: boolean;
 }
 
@@ -14,8 +14,8 @@ export class Deployment extends Stage {
         super(scope, id, props);
         // Deploy the main stack in the Deployment stage
         new MainStack(this, `MainStack-${props.stageName}`, {
-            stageName: props?.stageName,
-            bucketArn: props?.bucketArn,
+            stageName: props.stageName,
+            bucketArn: props.bucketArn,
             isProd: props?.isProd,
             env: props.env,
             description: "Create EC2, S3, Cloudfront"

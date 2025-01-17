@@ -14,24 +14,23 @@ import * as certificatemanager from "aws-cdk-lib/aws-certificatemanager";
 import {
     API_BETA_DOMAINNAME,
     API_PROD_DOMAINNAME,
-    AWS_S3_BUCKET_DEV_FRONTEND,
     DOMAIN_NAME
 } from "../configuration";
 import { Region, Stage } from "../constants";
 
 interface MainStackProps extends cdk.StackProps {
-    stageName?: string;
-    bucketArn?: string;
+    stageName: string;
+    bucketArn: string;
     isProd: boolean;
 }
 export class MainStack extends cdk.Stack {
-    constructor(scope: Construct, id: string, props?: MainStackProps) {
+    constructor(scope: Construct, id: string, props: MainStackProps) {
         super(scope, id, props);
 
         // Ensure props is defined and destructure safely
-        const stageName = props?.stageName ?? Stage.Beta_FE;
-        // const isProd = props?.isProd ?? false;
-        const bucketArn = props?.bucketArn ?? AWS_S3_BUCKET_DEV_FRONTEND;
+        const stageName = props.stageName;
+        // const isProd = props.isProd;
+        const bucketArn = props.bucketArn;
         const env = props?.env;
 
         // // Create a CloudWatch Log Group
