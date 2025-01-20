@@ -124,7 +124,7 @@ export class MyPipelineStack extends Stack {
 
         // STAGES.forEach(({ stageName, bucketArn, apiDomain, cloudfrontId, env }) => {
         STAGES.forEach(
-            ({ stageName, staticAssetsBucketName, apiDomain, tenantId, isProd, env }) => {
+            ({ stageName, staticAssetsBucketName, apiDomain, domain, tenantId, isProd, env }) => {
                 // STAGES.forEach(({ stageName, env, apiDomain }) => {
 
                 // CodeBuild project
@@ -134,7 +134,7 @@ export class MyPipelineStack extends Stack {
                     commands: ["npm run test", "npm run build"],
                     env: {
                         REACT_APP_STAGE: stageName,
-                        REACT_APP_PROD_URL: apiDomain,
+                        REACT_APP_PROD_URL: domain,
                         REACT_APP_TENANT_ID: tenantId,
                         GENERATE_SOURCEMAP: "false",
                         CI: "true"
@@ -186,6 +186,7 @@ export class MyPipelineStack extends Stack {
                 // Add stages to the pipeline
                 const Stage = new Deployment(this, `BuildDeployStage-${stageName}`, {
                     stageName,
+                    apiDomain,
                     isProd,
                     env: { region: env.region, account: env.account },
                     staticAssetsBucketName

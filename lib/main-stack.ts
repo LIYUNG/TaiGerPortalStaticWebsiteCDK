@@ -11,11 +11,12 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 // import * as subscriptions from "aws-cdk-lib/aws-sns-subscriptions";
 // import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as certificatemanager from "aws-cdk-lib/aws-certificatemanager";
-import { API_BETA_DOMAINNAME, API_PROD_DOMAINNAME, DOMAIN_NAME } from "../configuration";
+import { BETA_DOMAINNAME, PROD_DOMAINNAME, DOMAIN_NAME } from "../configuration";
 import { Region } from "../constants";
 
 interface MainStackProps extends cdk.StackProps {
     stageName: string;
+    apiDomain: string;
     staticAssetsBucketName: string;
     isProd: boolean;
 }
@@ -101,10 +102,10 @@ export class MainStack extends cdk.Stack {
         if (env?.region === Region.NRT) {
             // Prod
             // awsManagedPrefixListId = "pl-82a045eb";
-            domain = API_PROD_DOMAINNAME;
+            domain = PROD_DOMAINNAME;
         } else {
             // awsManagedPrefixListId = "pl-3b927c52";
-            domain = API_BETA_DOMAINNAME;
+            domain = BETA_DOMAINNAME;
         }
 
         // const awsManagedPrefix = ec2.PrefixList.fromPrefixListId(
@@ -232,6 +233,12 @@ export class MainStack extends cdk.Stack {
         //     connectionAttempts: 3,
         //     connectionTimeout: cdk.Duration.seconds(10)
         // });
+
+        // Construct the full URL for the API Gateway (use the appropriate URL format)
+        const apiUrl = `https://${props.apiDomain}`;
+
+        const apiGatewayOrigin = new origins.HttpOrigin(apiUrl);
+
         // Create the CloudFront distribution
         const distribution = new cloudfront.Distribution(
             this,
@@ -244,29 +251,29 @@ export class MainStack extends cdk.Stack {
                     cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
                     compress: true
                 },
-                // additionalBehaviors: {
-                //     "/api/*": {
-                //         origin: ec2Origin,
-                //         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
-                //         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-                //         cachePolicy: cachePolicy,
-                //         compress: true
-                //     },
-                //     "/auth/*": {
-                //         origin: ec2Origin,
-                //         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
-                //         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-                //         cachePolicy: cachePolicy,
-                //         compress: true
-                //     },
-                //     "/images/*": {
-                //         origin: ec2Origin,
-                //         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
-                //         allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
-                //         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
-                //         compress: true
-                //     }
-                // },
+                additionalBehaviors: {
+                    "/api/*": {
+                        origin: apiGatewayOrigin,
+                        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
+                        allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+                        // cachePolicy: cachePolicy,
+                        compress: true
+                    },
+                    "/auth/*": {
+                        origin: apiGatewayOrigin,
+                        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
+                        allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+                        // cachePolicy: cachePolicy,
+                        compress: true
+                    },
+                    "/images/*": {
+                        origin: apiGatewayOrigin,
+                        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
+                        allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+                        cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+                        compress: true
+                    }
+                },
                 errorResponses: [
                     {
                         httpStatus: 403,
