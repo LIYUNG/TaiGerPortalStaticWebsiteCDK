@@ -134,7 +134,7 @@ export class MyPipelineStack extends Stack {
                     commands: ["npm run test", "npm run build"],
                     env: {
                         REACT_APP_STAGE: stageName,
-                        REACT_APP_PROD_URL: domain,
+                        REACT_APP_PROD_URL: `https://${domain}`,
                         REACT_APP_TENANT_ID: tenantId,
                         GENERATE_SOURCEMAP: "false",
                         CI: "true"
