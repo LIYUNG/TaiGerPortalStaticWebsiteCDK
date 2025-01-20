@@ -233,9 +233,7 @@ export class MainStack extends cdk.Stack {
         // });
 
         // Construct the full URL for the API Gateway (use the appropriate URL format)
-        const apiUrl = `https://${props.apiDomain}`;
-
-        const apiGatewayOrigin = new origins.HttpOrigin(apiUrl);
+        const apiGatewayOrigin = new origins.HttpOrigin(props.apiDomain);
 
         // Create the CloudFront distribution
         const distribution = new cloudfront.Distribution(
