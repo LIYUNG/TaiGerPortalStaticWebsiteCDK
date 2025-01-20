@@ -16,6 +16,7 @@ import { Region } from "../constants";
 
 interface MainStackProps extends cdk.StackProps {
     stageName: string;
+    domain: string;
     apiDomain: string;
     staticAssetsBucketName: string;
     isProd: boolean;
@@ -98,14 +99,11 @@ export class MainStack extends cdk.Stack {
         //     allowAllOutbound: true
         // });
         // let awsManagedPrefixListId;
-        let domain = "";
         if (env?.region === Region.NRT) {
             // Prod
             // awsManagedPrefixListId = "pl-82a045eb";
-            domain = PROD_DOMAINNAME;
         } else {
             // awsManagedPrefixListId = "pl-3b927c52";
-            domain = BETA_DOMAINNAME;
         }
 
         // const awsManagedPrefix = ec2.PrefixList.fromPrefixListId(
@@ -288,7 +286,7 @@ export class MainStack extends cdk.Stack {
                         ttl: cdk.Duration.seconds(0)
                     }
                 ],
-                domainNames: [domain],
+                domainNames: [props.domain],
                 certificate: certificate,
                 priceClass: cloudfront.PriceClass.PRICE_CLASS_ALL
             }
@@ -297,7 +295,7 @@ export class MainStack extends cdk.Stack {
         // Create a CNAME record for the subdomain
         new route53.CnameRecord(this, `TaiGerPortalStaticWebsiteCnameRecord-${stageName}`, {
             zone: hostedZone,
-            recordName: domain, // Your subdomain
+            recordName: props.domain, // Your subdomain
             domainName: distribution.distributionDomainName
         });
     }

@@ -187,6 +187,7 @@ export class MyPipelineStack extends Stack {
                 const Stage = new Deployment(this, `BuildDeployStage-${stageName}`, {
                     stageName,
                     apiDomain,
+                    domain,
                     isProd,
                     env: { region: env.region, account: env.account },
                     staticAssetsBucketName
