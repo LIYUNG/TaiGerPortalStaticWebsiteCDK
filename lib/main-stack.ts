@@ -223,15 +223,13 @@ export class MainStack extends cdk.Stack {
             enableAcceptEncodingGzip: true,
             enableAcceptEncodingBrotli: true
         });
-
-        // const ec2Origin = new origins.HttpOrigin(instance.instancePublicDnsName, {
-        //     httpPort: 80,
-        //     protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
-        //     originSslProtocols: [cloudfront.OriginSslPolicy.TLS_V1_2],
-        //     connectionAttempts: 3,
-        //     connectionTimeout: cdk.Duration.seconds(10)
-        // });
-
+        const originRequestPolicy = new cloudfront.OriginRequestPolicy(
+            this,
+            "CustomOriginRequestPolicy",
+            {
+                headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList("tenantid")
+            }
+        );
         // Construct the full URL for the API Gateway (use the appropriate URL format)
         const apiGatewayOrigin = new origins.HttpOrigin(props.apiDomain);
 
@@ -253,6 +251,7 @@ export class MainStack extends cdk.Stack {
                         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
                         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
                         cachePolicy: cachePolicy,
+                        originRequestPolicy,
                         compress: true
                     },
                     "/auth/*": {
@@ -260,6 +259,7 @@ export class MainStack extends cdk.Stack {
                         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
                         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
                         cachePolicy: cachePolicy,
+                        originRequestPolicy,
                         compress: true
                     },
                     "/images/*": {
@@ -267,6 +267,7 @@ export class MainStack extends cdk.Stack {
                         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
                         allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
                         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+                        originRequestPolicy,
                         compress: true
                     }
                 },
