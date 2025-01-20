@@ -11,7 +11,7 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 // import * as subscriptions from "aws-cdk-lib/aws-sns-subscriptions";
 // import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as certificatemanager from "aws-cdk-lib/aws-certificatemanager";
-import { BETA_DOMAINNAME, PROD_DOMAINNAME, DOMAIN_NAME } from "../configuration";
+import { DOMAIN_NAME } from "../configuration";
 import { Region } from "../constants";
 
 interface MainStackProps extends cdk.StackProps {
