@@ -215,14 +215,14 @@ export class MainStack extends cdk.Stack {
         });
 
         // Define a custom cache policy
-        // const cachePolicy = new cloudfront.CachePolicy(this, `CustomCachePolicy-${stageName}`, {
-        //     cachePolicyName: `CustomCachePolicy-${stageName}`,
-        //     queryStringBehavior: cloudfront.CacheQueryStringBehavior.allowList("q"),
-        //     headerBehavior: cloudfront.CacheHeaderBehavior.none(),
-        //     cookieBehavior: cloudfront.CacheCookieBehavior.allowList("x-auth"),
-        //     enableAcceptEncodingGzip: true,
-        //     enableAcceptEncodingBrotli: true
-        // });
+        const cachePolicy = new cloudfront.CachePolicy(this, `CustomCachePolicy-${stageName}`, {
+            cachePolicyName: `CustomCachePolicy-${stageName}`,
+            queryStringBehavior: cloudfront.CacheQueryStringBehavior.allowList("q"),
+            headerBehavior: cloudfront.CacheHeaderBehavior.none(),
+            cookieBehavior: cloudfront.CacheCookieBehavior.allowList("x-auth"),
+            enableAcceptEncodingGzip: true,
+            enableAcceptEncodingBrotli: true
+        });
 
         // const ec2Origin = new origins.HttpOrigin(instance.instancePublicDnsName, {
         //     httpPort: 80,
@@ -254,14 +254,14 @@ export class MainStack extends cdk.Stack {
                         origin: apiGatewayOrigin,
                         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
                         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-                        // cachePolicy: cachePolicy,
+                        cachePolicy: cachePolicy,
                         compress: true
                     },
                     "/auth/*": {
                         origin: apiGatewayOrigin,
                         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
                         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-                        // cachePolicy: cachePolicy,
+                        cachePolicy: cachePolicy,
                         compress: true
                     },
                     "/images/*": {
