@@ -214,20 +214,13 @@ export class MainStack extends cdk.Stack {
             domainName: DOMAIN_NAME // Your domain name
         });
 
-        // Define a custom cache policy
-        const cachePolicy = new cloudfront.CachePolicy(this, `CustomCachePolicy-${stageName}`, {
-            cachePolicyName: `CustomCachePolicy-${stageName}`,
-            queryStringBehavior: cloudfront.CacheQueryStringBehavior.allowList("q"),
-            headerBehavior: cloudfront.CacheHeaderBehavior.none(),
-            cookieBehavior: cloudfront.CacheCookieBehavior.allowList("x-auth"),
-            enableAcceptEncodingGzip: true,
-            enableAcceptEncodingBrotli: true
-        });
         const originRequestPolicy = new cloudfront.OriginRequestPolicy(
             this,
             "CustomOriginRequestPolicy",
             {
-                headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList("tenantid")
+                headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList("tenantid"),
+                queryStringBehavior: cloudfront.OriginRequestQueryStringBehavior.all(), // Forward all query strings
+                cookieBehavior: cloudfront.OriginRequestCookieBehavior.all()
             }
         );
         // Construct the full URL for the API Gateway (use the appropriate URL format)
@@ -250,7 +243,7 @@ export class MainStack extends cdk.Stack {
                         origin: apiGatewayOrigin,
                         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
                         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-                        cachePolicy: cachePolicy,
+                        cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
                         originRequestPolicy,
                         compress: true
                     },
@@ -258,7 +251,7 @@ export class MainStack extends cdk.Stack {
                         origin: apiGatewayOrigin,
                         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
                         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-                        cachePolicy: cachePolicy,
+                        cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
                         originRequestPolicy,
                         compress: true
                     },
