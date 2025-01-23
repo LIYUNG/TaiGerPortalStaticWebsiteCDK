@@ -1,8 +1,13 @@
-# Welcome to your CDK TypeScript project
+# TaiGer Portal Front-End with AWS CDK TypeScript
 
-This is a blank project for CDK development with TypeScript.
+This is package includes the infrastructure and CodePipeline for deploying TaiGer Portal React Front-End.
 
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+- CodePipeline
+- Build/Deploy steps
+- Cloudfront
+  - Origin - S3 bucker (React Static Assets)
+  - Origin - API Gateway (Custom Domain)
+  - Origin Access Control (OAC)
 
 ## Useful commands
 
