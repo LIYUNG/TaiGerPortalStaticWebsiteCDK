@@ -22,7 +22,6 @@ import {
 } from "../configuration";
 import { Deployment } from "./stage";
 import { S3Stack } from "./s3_stack";
-import { Topic } from "aws-cdk-lib/aws-sns";
 export interface MyPipelineStackProps extends StackProps {
     s3Buckets: S3Stack[];
 }
