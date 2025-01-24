@@ -7,9 +7,7 @@ import {
     // ManualApprovalStep,
     ShellStep
 } from "aws-cdk-lib/pipelines";
-
 import * as codepipeline_actions from "aws-cdk-lib/aws-codepipeline-actions";
-// import * as s3 from "aws-cdk-lib/aws-s3";
 import * as iam from "aws-cdk-lib/aws-iam";
 import { Region, STAGES } from "../constants";
 import {
@@ -24,7 +22,7 @@ import {
 } from "../configuration";
 import { Deployment } from "./stage";
 import { S3Stack } from "./s3_stack";
-// import { S3Stack } from "./s3_stack";
+import { Topic } from "aws-cdk-lib/aws-sns";
 export interface MyPipelineStackProps extends StackProps {
     s3Buckets: S3Stack[];
 }
@@ -143,19 +141,18 @@ export class MyPipelineStack extends Stack {
                     projectName: `BuildProject-${stageName}`
                 });
 
-                // const snsDeployFailedTopic = new sns.Topic(this, `${stageName}-DeployFailedTopic`, {
-                //     displayName: `DeployFailedSTopic-${stageName}`
-                // });
+                const snsDeployFailedTopic = new Topic(this, `${stageName}-DeployFailedTopic`, {
+                    displayName: `DeployFailedSTopic-${stageName}`
+                });
 
                 // TODO: add slack endpoint
-
-                // new cloudwatch.Alarm(this, `${stageName}-DeployFailedAlarm`, {
+                // new Alarm(this, `${stageName}-DeployFailedAlarm`, {
                 //     alarmName: `Deploy-${stageName}-Alarm`,
-                //     metric: new cloudwatch.Metric({
+                //     metric: new Metric({
                 //         namespace: "AWS/CodePipeline",
                 //         metricName: "ActionExecution",
                 //         dimensionsMap: {
-                //             PipelineName: pipeline.pipelineName,
+                //             PipelineName: `${PIPELINE_NAME}`,
                 //             StageName: "Deploy",
                 //             ActionName: deployAction.actionProperties.actionName
                 //         },
@@ -164,8 +161,8 @@ export class MyPipelineStack extends Stack {
                 //     }),
                 //     threshold: 1, // Example threshold for failure
                 //     evaluationPeriods: 1,
-                //     comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD
-                // }).addAlarmAction(new cloudwatch_actions.SnsAction(snsDeployFailedTopic));
+                //     comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD
+                // }).addAlarmAction(new SnsAction(snsDeployFailedTopic));
 
                 // // Manual approval action
                 // const approvalStep = new ManualApprovalStep(`Approval-${stageName}`, {
@@ -190,17 +187,11 @@ export class MyPipelineStack extends Stack {
                 const invalidateCacheStep = new ShellStep(`InvalidateCache-${stageName}`, {
                     commands: [
                         // Fetch CloudFront Distribution ID using AWS CLI
-                        `CLOUDFRONT_ID=$(aws cloudformation describe-stacks --stack-name MainStack-${stageName} --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionId'].OutputValue" --output text)`,
+                        `CLOUDFRONT_ID=$(aws cloudformation describe-stacks --stack-name ${stageName}-MainStack-${stageName} --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionId'].OutputValue" --output text)`,
                         // Use the fetched CloudFront ID to create invalidation
                         `aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_ID --paths "/*"`
                     ]
                 });
-
-                // const invalidateCacheStep = new ShellStep(`InvalidateCache-${stageName}`, {
-                //     commands: [
-                //         `aws cloudfront create-invalidation --distribution-id ${cloudfrontId} --paths "/*"`
-                //     ]
-                // });
 
                 pipeline.addStage(Stage, {
                     pre: [buildStep],
