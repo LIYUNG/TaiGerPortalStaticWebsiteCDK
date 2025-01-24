@@ -141,29 +141,6 @@ export class MyPipelineStack extends Stack {
                     projectName: `BuildProject-${stageName}`
                 });
 
-                const snsDeployFailedTopic = new Topic(this, `${stageName}-DeployFailedTopic`, {
-                    displayName: `DeployFailedSTopic-${stageName}`
-                });
-
-                // TODO: add slack endpoint
-                // new Alarm(this, `${stageName}-DeployFailedAlarm`, {
-                //     alarmName: `Deploy-${stageName}-Alarm`,
-                //     metric: new Metric({
-                //         namespace: "AWS/CodePipeline",
-                //         metricName: "ActionExecution",
-                //         dimensionsMap: {
-                //             PipelineName: `${PIPELINE_NAME}`,
-                //             StageName: "Deploy",
-                //             ActionName: deployAction.actionProperties.actionName
-                //         },
-                //         statistic: "Sum",
-                //         period: Duration.minutes(1)
-                //     }),
-                //     threshold: 1, // Example threshold for failure
-                //     evaluationPeriods: 1,
-                //     comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD
-                // }).addAlarmAction(new SnsAction(snsDeployFailedTopic));
-
                 // // Manual approval action
                 // const approvalStep = new ManualApprovalStep(`Approval-${stageName}`, {
                 //     email: AWS_CODEPIPELINE_APPROVER_EMAIL
