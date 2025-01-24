@@ -48,8 +48,6 @@ export class ChatbotCloudWatchIntegration extends Construct {
             comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD
         }).addAlarmAction(new cloudwatch_actions.SnsAction(snsBuildFailedTopic));
 
-        
-
         // TODO: add slack endpoint
         // new cloudwatch.Alarm(this, `DeployFailedAlarm`, {
         //     alarmName: `Deploy-Alarm`,
