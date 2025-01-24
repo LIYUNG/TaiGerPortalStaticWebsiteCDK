@@ -22,6 +22,7 @@ interface MainStackProps extends cdk.StackProps {
     isProd: boolean;
 }
 export class MainStack extends cdk.Stack {
+    public readonly distribution: cloudfront.Distribution;
     constructor(scope: Construct, id: string, props: MainStackProps) {
         super(scope, id, props);
 
@@ -29,20 +30,6 @@ export class MainStack extends cdk.Stack {
         const stageName = props.stageName;
         // const isProd = props.isProd;
         const env = props?.env;
-
-        // // Create a CloudWatch Log Group
-        // const logGroup = new logs.LogGroup(this, `TaiGerLogGroup-${stageName}`, {
-        //     logGroupName: `/aws/taiger-portal-log-group-${stageName}`,
-        //     retention: logs.RetentionDays.SIX_MONTHS, // Set the retention period as needed
-        //     removalPolicy: cdk.RemovalPolicy.RETAIN // Automatically delete log group on stack deletion
-        // });
-
-        // // Create a CloudWatch Log Stream
-        // new logs.LogStream(this, `MyLogStream-${stageName}`, {
-        //     logGroup: logGroup,
-        //     logStreamName: `taiger-portal-server-stream-${stageName}`,
-        //     removalPolicy: cdk.RemovalPolicy.RETAIN // Automatically delete log stream on stack deletion
-        // });
 
         // Get the existing VPC
         // const vpc = new ec2.Vpc(this, `Vpc-${stageName}`, {
@@ -158,32 +145,6 @@ export class MainStack extends cdk.Stack {
 
         // alarmTopic.addSubscription(new subscriptions.EmailSubscription("taiger.leoc@gmail.com"));
 
-        // // Define the CloudWatch alarm for NetworkIn metric
-        // const networkInAlarm = new cloudwatch.Alarm(this, `NetworkInAlarm-${stageName}`, {
-        //     metric: new cloudwatch.Metric({
-        //         namespace: "AWS/EC2",
-        //         metricName: "NetworkIn",
-        //         dimensionsMap: {
-        //             InstanceId: instance.instanceId
-        //         },
-        //         statistic: "sum",
-        //         period: cdk.Duration.minutes(5)
-        //     }),
-        //     threshold: 5000,
-        //     evaluationPeriods: 1,
-        //     comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
-        //     alarmDescription: `Alarm when NetworkIn is less than or equal to 5000 for ${stageName}`,
-        //     alarmName: `NetworkInAlarm-${stageName}`,
-        //     datapointsToAlarm: 1
-        // });
-
-        // // Add the SNS topic as an alarm action
-        // networkInAlarm.addAlarmAction({
-        //     bind: () => ({
-        //         alarmActionArn: alarmTopic.topicArn
-        //     })
-        // });
-
         // S3 Bucket for static website hosting
         const websiteBucket = new s3.Bucket(this, `TaiGer-Frontend-Bucket-${stageName}`, {
             bucketName: props.staticAssetsBucketName,
@@ -228,7 +189,7 @@ export class MainStack extends cdk.Stack {
         const apiGatewayOrigin = new origins.HttpOrigin(props.apiDomain);
 
         // Create the CloudFront distribution
-        const distribution = new cloudfront.Distribution(
+        this.distribution = new cloudfront.Distribution(
             this,
             `TaiGerPortalStaticWebsiteDistribution-${stageName}`,
             {
@@ -289,7 +250,13 @@ export class MainStack extends cdk.Stack {
         new route53.CnameRecord(this, `TaiGerPortalStaticWebsiteCnameRecord-${stageName}`, {
             zone: hostedZone,
             recordName: props.domain, // Your subdomain
-            domainName: distribution.distributionDomainName
+            domainName: this.distribution.distributionDomainName
+        });
+
+        // Output the CloudFront distribution ID
+        new cdk.CfnOutput(this, "CloudFrontDistributionId", {
+            value: this.distribution.distributionId,
+            exportName: `CloudFrontDistributionId-${props.stageName}`
         });
     }
 }

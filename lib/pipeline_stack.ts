@@ -143,17 +143,6 @@ export class MyPipelineStack extends Stack {
                     projectName: `BuildProject-${stageName}`
                 });
 
-                const deployStep = new ShellStep(`Deploy-FrontEnd-${stageName}`, {
-                    input: buildStep,
-                    commands: ["ls", `aws s3 sync . s3://${staticAssetsBucketName}`]
-                });
-
-                // const invalidateCacheStep = new ShellStep(`InvalidateCache-${stageName}`, {
-                //     commands: [
-                //         `aws cloudfront create-invalidation --distribution-id ${cloudfrontId} --paths "/*"`
-                //     ]
-                // });
-
                 // const snsDeployFailedTopic = new sns.Topic(this, `${stageName}-DeployFailedTopic`, {
                 //     displayName: `DeployFailedSTopic-${stageName}`
                 // });
@@ -192,9 +181,30 @@ export class MyPipelineStack extends Stack {
                     env: { region: env.region, account: env.account },
                     staticAssetsBucketName
                 });
+
+                const deployStep = new ShellStep(`Deploy-FrontEnd-${stageName}`, {
+                    input: buildStep,
+                    commands: ["ls", `aws s3 sync . s3://${staticAssetsBucketName}`]
+                });
+
+                const invalidateCacheStep = new ShellStep(`InvalidateCache-${stageName}`, {
+                    commands: [
+                        // Fetch CloudFront Distribution ID using AWS CLI
+                        `CLOUDFRONT_ID=$(aws cloudformation describe-stacks --stack-name MainStack-${stageName} --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionId'].OutputValue" --output text)`,
+                        // Use the fetched CloudFront ID to create invalidation
+                        `aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_ID --paths "/*"`
+                    ]
+                });
+
+                // const invalidateCacheStep = new ShellStep(`InvalidateCache-${stageName}`, {
+                //     commands: [
+                //         `aws cloudfront create-invalidation --distribution-id ${cloudfrontId} --paths "/*"`
+                //     ]
+                // });
+
                 pipeline.addStage(Stage, {
-                    // pre: [],
-                    post: [buildStep, deployStep] // can also delete the old ec2
+                    pre: [buildStep],
+                    post: [deployStep, invalidateCacheStep] // can also delete the old ec2
                 });
                 // pipeline.addStage(Stage);
             }
