@@ -1,4 +1,4 @@
-import { Stack, StackProps, SecretValue } from "aws-cdk-lib";
+import { Stack, StackProps, SecretValue, Fn } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import {
     CodeBuildStep,
@@ -24,6 +24,7 @@ import {
 } from "../configuration";
 import { Deployment } from "./stage";
 import { S3Stack } from "./s3_stack";
+import { StringParameter } from "aws-cdk-lib/aws-ssm";
 export interface MyPipelineStackProps extends StackProps {
     s3Buckets: S3Stack[];
 }
@@ -126,6 +127,15 @@ export class MyPipelineStack extends Stack {
             const domain = `${stageName}.${DOMAIN_NAME}`;
             const apiDomain = `${stageName}.api.${DOMAIN_NAME}`;
 
+            const taigerUserPoolId = StringParameter.valueForStringParameter(
+                this,
+                "/auth/taigerUserPoolId"
+            );
+            const userPoolClientId = StringParameter.valueForStringParameter(
+                this,
+                "/auth/taigerUserPoolClientId"
+            );
+
             const buildStep = new CodeBuildStep(`Build-FrontEnd-${stageName}`, {
                 input: sourceStep,
                 installCommands: ["cd client", "npm install"],
@@ -135,6 +145,8 @@ export class MyPipelineStack extends Stack {
                     REACT_APP_PROD_URL: `https://${domain}`,
                     REACT_APP_TENANT_ID: tenantId,
                     GENERATE_SOURCEMAP: "false",
+                    REACT_APP_USER_POOL_ID: taigerUserPoolId, // Import UserPoolId from CF Output
+                    REACT_APP_USER_POOL_CLIENT_ID: Fn.importValue(userPoolClientId), // Import UserPoolClientId
                     CI: "true"
                 },
                 primaryOutputDirectory: "client/build",
@@ -172,7 +184,7 @@ export class MyPipelineStack extends Stack {
 
             pipeline.addStage(Stage, {
                 pre: [buildStep],
-                post: [deployStep, invalidateCacheStep] // can also delete the old ec2
+                post: [deployStep, invalidateCacheStep]
             });
         });
     }

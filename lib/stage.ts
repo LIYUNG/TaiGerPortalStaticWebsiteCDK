@@ -1,7 +1,6 @@
 import { Stage, type StageProps } from "aws-cdk-lib";
 import { type Construct } from "constructs";
 import { CloudFrontStack } from "./cloudfront-stack";
-import { CognitoStack } from "./cognito-stack";
 
 // Main deployment setup. Collection of the stacks and deployment sequence
 interface DeploymentkProps extends StageProps {
@@ -25,13 +24,6 @@ export class Deployment extends Stage {
             isProd: props?.isProd,
             env: props.env,
             description: "Create S3, Cloudfront"
-        });
-
-        new CognitoStack(this, `CognitoStack-${props.stageName}`, {
-            stageName: props.stageName,
-            domain: props.domain,
-            env: props.env,
-            description: "Create TaiGer user pool S3"
         });
     }
 }
