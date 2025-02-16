@@ -1,4 +1,4 @@
-import { Stack, StackProps, SecretValue, Fn } from "aws-cdk-lib";
+import { Stack, StackProps, SecretValue } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import {
     CodeBuildStep,
@@ -146,7 +146,7 @@ export class MyPipelineStack extends Stack {
                     REACT_APP_TENANT_ID: tenantId,
                     GENERATE_SOURCEMAP: "false",
                     REACT_APP_USER_POOL_ID: taigerUserPoolId, // Import UserPoolId from CF Output
-                    REACT_APP_USER_POOL_CLIENT_ID: Fn.importValue(userPoolClientId), // Import UserPoolClientId
+                    REACT_APP_USER_POOL_CLIENT_ID: userPoolClientId, // Import UserPoolClientId
                     CI: "true"
                 },
                 primaryOutputDirectory: "client/build",
