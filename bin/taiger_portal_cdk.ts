@@ -3,10 +3,10 @@ import "source-map-support/register";
 import * as cdk from "aws-cdk-lib";
 
 import { MyPipelineStack } from "../lib/pipeline_stack";
-import { Region } from "../constants";
+import { Region, Stage } from "../constants";
 import { MySlackboteStack } from "../lib/slackbot_stack";
 import { S3Stack } from "../lib/s3_stack";
-import { AWS_ACCOUNT, Stage } from "../configuration";
+import { AWS_ACCOUNT } from "../configuration";
 
 const app = new cdk.App();
 
