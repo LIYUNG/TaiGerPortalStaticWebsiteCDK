@@ -1,5 +1,7 @@
 import * as cdk from "aws-cdk-lib";
 import * as cognito from "aws-cdk-lib/aws-cognito";
+import { FederatedPrincipal, Role } from "aws-cdk-lib/aws-iam";
+import { Construct } from "constructs";
 
 interface CognitoStackProps extends cdk.StackProps {
     stageName: string;
@@ -8,18 +10,19 @@ interface CognitoStackProps extends cdk.StackProps {
 
 export class CognitoStack extends cdk.Stack {
     public readonly userPool: cognito.UserPool;
+    public readonly identityPool: cognito.CfnIdentityPool;
     public readonly userPoolClient: cognito.UserPoolClient;
 
-    constructor(scope: cdk.App, id: string, props: CognitoStackProps) {
+    constructor(scope: Construct, id: string, props: CognitoStackProps) {
         super(scope, id, props);
 
         // Create Cognito User Pool
         this.userPool = new cognito.UserPool(this, `UserPool-${props.stageName}`, {
-            selfSignUpEnabled: true,
-            userVerification: { emailStyle: cognito.VerificationEmailStyle.LINK },
-            signInAliases: { email: true },
+            selfSignUpEnabled: false,
             autoVerify: { email: true },
-            removalPolicy: cdk.RemovalPolicy.DESTROY // Prod: retain
+            signInAliases: { email: true }
+            // userVerification: { emailStyle: cognito.VerificationEmailStyle.LINK },
+            // removalPolicy: cdk.RemovalPolicy.DESTROY // Prod: retain
         });
 
         // Create App Client for authentication
@@ -28,10 +31,44 @@ export class CognitoStack extends cdk.Stack {
             `UserPoolClient-${props.stageName}`,
             {
                 userPool: this.userPool,
-                authFlows: { userPassword: true },
-                oAuth: {
-                    callbackUrls: [`https://${props.domain}`], // CloudFront URL after login
-                    logoutUrls: [`https://${props.domain}/logout`]
+                generateSecret: false // Don't need to generate secret for webapp running on browers
+            }
+        );
+
+        this.identityPool = new cognito.CfnIdentityPool(this, `IdentityPool-${props.stageName}`, {
+            allowUnauthenticatedIdentities: true,
+            cognitoIdentityProviders: [
+                {
+                    clientId: this.userPoolClient.userPoolClientId,
+                    providerName: this.userPool.userPoolProviderName
+                }
+            ]
+        });
+
+        const isUserCognitoGroupRole = new Role(this, `UserCognitoGroupRole-${props.stageName}`, {
+            description: "Default role for authenticated users",
+            assumedBy: new FederatedPrincipal(
+                "cognito-identity.amazonaws.com",
+                {
+                    StringEquals: {
+                        "cognito-identity.amazonaws.com:aud": this.identityPool.ref
+                    },
+                    "ForAnyValue:StringLike": {
+                        "cognito-identity.amazonaws.com:amr": "authenticated"
+                    }
+                },
+                "sts:AssumeRoleWithWebIdentity"
+            )
+        });
+
+        new cognito.CfnIdentityPoolRoleAttachment(
+            this,
+            `IdentityPoolRoleAttachment-${props.stageName}`,
+            {
+                identityPoolId: this.identityPool.ref,
+                roles: {
+                    authenticated: isUserCognitoGroupRole.roleArn,
+                    unauthenticated: isUserCognitoGroupRole.roleArn
                 }
             }
         );

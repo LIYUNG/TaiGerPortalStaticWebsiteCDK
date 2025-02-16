@@ -9,6 +9,7 @@ import {
 } from "aws-cdk-lib/pipelines";
 import * as codepipeline_actions from "aws-cdk-lib/aws-codepipeline-actions";
 import * as iam from "aws-cdk-lib/aws-iam";
+
 import { Region, STAGES } from "../constants";
 import {
     AWS_S3_BUCKET_DEV_FRONTEND,
@@ -163,7 +164,7 @@ export class MyPipelineStack extends Stack {
             const invalidateCacheStep = new ShellStep(`InvalidateCache-${stageName}`, {
                 commands: [
                     // Fetch CloudFront Distribution ID using AWS CLI
-                    `CLOUDFRONT_ID=$(aws cloudformation describe-stacks --stack-name ${stageName}-MainStack-${stageName} --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionId'].OutputValue" --output text)`,
+                    `CLOUDFRONT_ID=$(aws cloudformation describe-stacks --stack-name ${stageName}-CloudFrontStack-${stageName} --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionId'].OutputValue" --output text)`,
                     // Use the fetched CloudFront ID to create invalidation
                     `aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_ID --paths "/*"`
                 ]

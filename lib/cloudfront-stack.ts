@@ -3,27 +3,23 @@ import { Construct } from "constructs";
 import * as route53 from "aws-cdk-lib/aws-route53";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
-// import * as ec2 from "aws-cdk-lib/aws-ec2";
-// import * as iam from "aws-cdk-lib/aws-iam";
 import * as s3 from "aws-cdk-lib/aws-s3";
-// import * as logs from "aws-cdk-lib/aws-logs";
-// import * as sns from "aws-cdk-lib/aws-sns";
-// import * as subscriptions from "aws-cdk-lib/aws-sns-subscriptions";
-// import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as certificatemanager from "aws-cdk-lib/aws-certificatemanager";
+
 import { DOMAIN_NAME } from "../configuration";
 import { Region } from "../constants";
 
-interface MainStackProps extends cdk.StackProps {
+interface CloudFrontStackProps extends cdk.StackProps {
     stageName: string;
     domain: string;
     apiDomain: string;
     staticAssetsBucketName: string;
     isProd: boolean;
 }
-export class MainStack extends cdk.Stack {
+
+export class CloudFrontStack extends cdk.Stack {
     public readonly distribution: cloudfront.Distribution;
-    constructor(scope: Construct, id: string, props: MainStackProps) {
+    constructor(scope: Construct, id: string, props: CloudFrontStackProps) {
         super(scope, id, props);
 
         // Ensure props is defined and destructure safely
