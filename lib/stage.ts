@@ -15,6 +15,7 @@ export class Deployment extends Stage {
     constructor(scope: Construct, id: string, props: DeploymentkProps) {
         super(scope, id, props);
         // Deploy the main stack in the Deployment stage
+
         new MainStack(this, `MainStack-${props.stageName}`, {
             stageName: props.stageName,
             staticAssetsBucketName: props.staticAssetsBucketName,

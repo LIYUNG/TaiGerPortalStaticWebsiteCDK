@@ -13,6 +13,7 @@ import { Region, STAGES } from "../constants";
 import {
     AWS_S3_BUCKET_DEV_FRONTEND,
     AWS_S3_BUCKET_PROD_FRONTEND,
+    DOMAIN_NAME,
     GITHUB_CDK_REPO,
     GITHUB_OWNER,
     GITHUB_PACKAGE_BRANCH,
@@ -37,7 +38,7 @@ export class MyPipelineStack extends Stack {
         //     this,
         //     "TaiGerPipelineBucketBeta",
         //     {
-        //         bucketName: `taigerpipeline-artifact-${Stage.Beta_FE}`.toLowerCase(),
+        //         bucketName: `taigerpipeline-artifact-${Stage.BETA}`.toLowerCase(),
         //         region: Region.IAD,
         //         encryptionKey: props?.s3Buckets![0].kmsKey
         //     }
@@ -47,7 +48,7 @@ export class MyPipelineStack extends Stack {
         //     this,
         //     "TaiGerPipelineBucketProd",
         //     {
-        //         bucketName: `taigerpipeline-artifact-${Stage.Prod_NA}`.toLowerCase(),
+        //         bucketName: `taigerpipeline-artifact-${Stage.PROD}`.toLowerCase(),
         //         region: Region.NRT,
         //         encryptionKey: props?.s3Buckets![1].kmsKey
         //     }
@@ -119,62 +120,59 @@ export class MyPipelineStack extends Stack {
             }
         );
 
-        // STAGES.forEach(({ stageName, bucketArn, apiDomain, cloudfrontId, env }) => {
-        STAGES.forEach(
-            ({ stageName, staticAssetsBucketName, apiDomain, domain, tenantId, isProd, env }) => {
-                // STAGES.forEach(({ stageName, env, apiDomain }) => {
+        STAGES.forEach(({ stageName, staticAssetsBucketName, tenantId, isProd, env }) => {
+            // CodeBuild project
+            const domain = `${stageName}.${DOMAIN_NAME}`;
+            const apiDomain = `${stageName}.api.${DOMAIN_NAME}`;
 
-                // CodeBuild project
-                const buildStep = new CodeBuildStep(`Build-FrontEnd-${stageName}`, {
-                    input: sourceStep,
-                    installCommands: ["cd client", "npm install"],
-                    commands: ["npm run test", "npm run build"],
-                    env: {
-                        REACT_APP_STAGE: stageName,
-                        REACT_APP_PROD_URL: `https://${domain}`,
-                        REACT_APP_TENANT_ID: tenantId,
-                        GENERATE_SOURCEMAP: "false",
-                        CI: "true"
-                    },
-                    primaryOutputDirectory: "client/build",
-                    projectName: `BuildProject-${stageName}`
-                });
+            const buildStep = new CodeBuildStep(`Build-FrontEnd-${stageName}`, {
+                input: sourceStep,
+                installCommands: ["cd client", "npm install"],
+                commands: ["npm run test", "npm run build"],
+                env: {
+                    REACT_APP_STAGE: stageName,
+                    REACT_APP_PROD_URL: `https://${domain}`,
+                    REACT_APP_TENANT_ID: tenantId,
+                    GENERATE_SOURCEMAP: "false",
+                    CI: "true"
+                },
+                primaryOutputDirectory: "client/build",
+                projectName: `BuildProject-${stageName}`
+            });
 
-                // // Manual approval action
-                // const approvalStep = new ManualApprovalStep(`Approval-${stageName}`, {
-                //     email: AWS_CODEPIPELINE_APPROVER_EMAIL
-                // });
+            // // Manual approval action
+            // const approvalStep = new ManualApprovalStep(`Approval-${stageName}`, {
+            //     email: AWS_CODEPIPELINE_APPROVER_EMAIL
+            // });
 
-                // Add stages to the pipeline
-                const Stage = new Deployment(this, `BuildDeployStage-${stageName}`, {
-                    stageName,
-                    apiDomain,
-                    domain,
-                    isProd,
-                    env: { region: env.region, account: env.account },
-                    staticAssetsBucketName
-                });
+            // Add stages to the pipeline
+            const Stage = new Deployment(this, `BuildDeployStage-${stageName}`, {
+                stageName,
+                apiDomain,
+                domain,
+                isProd,
+                env: { region: env.region, account: env.account },
+                staticAssetsBucketName
+            });
 
-                const deployStep = new ShellStep(`Deploy-FrontEnd-${stageName}`, {
-                    input: buildStep,
-                    commands: ["ls", `aws s3 sync . s3://${staticAssetsBucketName}`]
-                });
+            const deployStep = new ShellStep(`Deploy-FrontEnd-${stageName}`, {
+                input: buildStep,
+                commands: ["ls", `aws s3 sync . s3://${staticAssetsBucketName}`]
+            });
 
-                const invalidateCacheStep = new ShellStep(`InvalidateCache-${stageName}`, {
-                    commands: [
-                        // Fetch CloudFront Distribution ID using AWS CLI
-                        `CLOUDFRONT_ID=$(aws cloudformation describe-stacks --stack-name ${stageName}-MainStack-${stageName} --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionId'].OutputValue" --output text)`,
-                        // Use the fetched CloudFront ID to create invalidation
-                        `aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_ID --paths "/*"`
-                    ]
-                });
+            const invalidateCacheStep = new ShellStep(`InvalidateCache-${stageName}`, {
+                commands: [
+                    // Fetch CloudFront Distribution ID using AWS CLI
+                    `CLOUDFRONT_ID=$(aws cloudformation describe-stacks --stack-name ${stageName}-MainStack-${stageName} --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionId'].OutputValue" --output text)`,
+                    // Use the fetched CloudFront ID to create invalidation
+                    `aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_ID --paths "/*"`
+                ]
+            });
 
-                pipeline.addStage(Stage, {
-                    pre: [buildStep],
-                    post: [deployStep, invalidateCacheStep] // can also delete the old ec2
-                });
-                // pipeline.addStage(Stage);
-            }
-        );
+            pipeline.addStage(Stage, {
+                pre: [buildStep],
+                post: [deployStep, invalidateCacheStep] // can also delete the old ec2
+            });
+        });
     }
 }

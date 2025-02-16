@@ -3,21 +3,21 @@ import "source-map-support/register";
 import * as cdk from "aws-cdk-lib";
 
 import { MyPipelineStack } from "../lib/pipeline_stack";
-import { Region, Stage } from "../constants";
+import { Region } from "../constants";
 import { MySlackboteStack } from "../lib/slackbot_stack";
 import { S3Stack } from "../lib/s3_stack";
-import { AWS_ACCOUNT } from "../configuration";
+import { AWS_ACCOUNT, Stage } from "../configuration";
 
 const app = new cdk.App();
 
 const s3Beta = new S3Stack(app, "S3StackBeta", {
     env: { region: Region.IAD, account: AWS_ACCOUNT },
-    stageName: Stage.Beta_FE
+    stageName: Stage.BETA
 });
 
 const s3Prod = new S3Stack(app, "S3StackProd", {
     env: { region: Region.NRT, account: AWS_ACCOUNT },
-    stageName: Stage.Prod_NA
+    stageName: Stage.PROD
 });
 
 new MySlackboteStack(app, "MySlackboteStack", {
