@@ -7,7 +7,6 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import * as certificatemanager from "aws-cdk-lib/aws-certificatemanager";
 
 import { DOMAIN_NAME } from "../configuration";
-import { Region } from "../constants";
 
 interface CloudFrontStackProps extends cdk.StackProps {
     stageName: string;
@@ -24,129 +23,12 @@ export class CloudFrontStack extends cdk.Stack {
 
         // Ensure props is defined and destructure safely
         const stageName = props.stageName;
-        // const isProd = props.isProd;
-        const env = props?.env;
-
-        // Get the existing VPC
-        // const vpc = new ec2.Vpc(this, `Vpc-${stageName}`, {
-        //     maxAzs: 3, // Default is all AZs in the region
-        //     natGateways: 0, // Number of NAT Gateways
-        //     subnetConfiguration: [
-        //         {
-        //             name: "Public",
-        //             subnetType: ec2.SubnetType.PUBLIC
-        //         },
-        //         {
-        //             name: "Private",
-        //             subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
-        //         },
-        //         {
-        //             name: "Isolated",
-        //             subnetType: ec2.SubnetType.PRIVATE_ISOLATED
-        //         }
-        //     ]
-        // });
-
-        // Define User Data script
-        // const userData = ec2.UserData.forLinux();
-        // userData.addCommands(
-        //     "sudo yum update -y",
-        //     "sudo yum install -y awscli",
-        //     "mkdir taiger_express_server", //   create folder
-        //     "cd taiger_express_server", // Download the file from S3 bucket
-        //     "aws s3 sync s3://taiger-file-storage-production-backend-server .", // Download server code
-        //     isProd
-        //         ? "aws s3 sync s3://taiger-environment-variables/.env.production ."
-        //         : "aws s3 sync s3://taiger-environment-variables/.env.development .", // Download environment file
-        //     "curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -",
-        //     "sudo yum install -y nodejs",
-        //     "cd /taiger_express_server/python/TaiGerTranscriptAnalyzerJS",
-        //     "sudo yum install -y python3-pip",
-        //     "sudo /bin/python3 -m pip install -r /taiger_express_server/python/TaiGerTranscriptAnalyzerJS/requirements.txt",
-        //     "cd /taiger_express_server",
-        //     "sudo chown -R $USER /taiger_express_server", // grant create folder permission
-        //     "sudo npm install",
-        //     "sudo npm install pm2 -g",
-        //     "sudo pm2 startup", // Start the Node.js server
-        //     isProd ? "sudo pm2 start npm -- start" : "sudo pm2 start npm -- run-script dev",
-        //     "sudo pm2 save"
-        // );
-        // Import the existing IAM role using its ARN
-        // const existingRole = iam.Role.fromRoleArn(
-        //     this,
-        //     "ExistingRole",
-        //     "arn:aws:iam::669131042313:role/ec2_taiger_test_infra"
-        // );
-        // const securityGroupCloudFrontOnly = new ec2.SecurityGroup(this, `SG-${stageName}`, {
-        //     vpc,
-        //     allowAllOutbound: true
-        // });
-        // let awsManagedPrefixListId;
-        if (env?.region === Region.NRT) {
-            // Prod
-            // awsManagedPrefixListId = "pl-82a045eb";
-        } else {
-            // awsManagedPrefixListId = "pl-3b927c52";
-        }
-
-        // const awsManagedPrefix = ec2.PrefixList.fromPrefixListId(
-        //     this,
-        //     `cloudFrontOriginPrefixList=${stageName}`,
-        //     awsManagedPrefixListId
-        // );
-
-        // securityGroupCloudFrontOnly.addIngressRule(
-        //     ec2.Peer.prefixList(awsManagedPrefix.prefixListId),
-        //     ec2.Port.tcp(80)
-        // );
-        // const keyPair = new ec2.KeyPair(this, `Pipeline-${stageName}`, {
-        //     keyPairName: `KeyPair-CICD-${stageName}`
-        // });
-
-        // // Get the public subnets from the VPC
-        // const publicSubnets = vpc.selectSubnets({
-        //     subnetType: ec2.SubnetType.PUBLIC
-        // });
-
-        // const instance = new ec2.Instance(this, `MyInstance-${stageName}`, {
-        //     vpc,
-        //     instanceType: ec2.InstanceType.of(ec2.InstanceClass.T4G, ec2.InstanceSize.NANO),
-        //     machineImage: new ec2.AmazonLinuxImage({
-        //         cpuType: ec2.AmazonLinuxCpuType.ARM_64,
-        //         generation: ec2.AmazonLinuxGeneration.AMAZON_LINUX_2
-        //     }),
-        //     securityGroup: securityGroupCloudFrontOnly,
-        //     blockDevices: [
-        //         {
-        //             deviceName: "/dev/xvda",
-        //             volume: cdk.aws_ec2.BlockDeviceVolume.ebs(8, {
-        //                 volumeType: cdk.aws_ec2.EbsDeviceVolumeType.GP3,
-        //                 iops: 3000,
-        //                 encrypted: false
-        //             })
-        //         }
-        //     ],
-        //     role: existingRole,
-        //     keyPair: keyPair,
-        //     userData: userData,
-        //     vpcSubnets: publicSubnets,
-        //     instanceName: new Date().toISOString()
-        //     // TODO:  can be added here as per your requirements
-        // });
-
-        // // Define the SNS topic
-        // const alarmTopic = new sns.Topic(this, `AlarmTopic-${stageName}`, {
-        //     displayName: `Alarm notifications for ${stageName}`
-        // });
-
-        // alarmTopic.addSubscription(new subscriptions.EmailSubscription("taiger.leoc@gmail.com"));
 
         // S3 Bucket for static website hosting
         const websiteBucket = new s3.Bucket(this, `TaiGer-Frontend-Bucket-${stageName}`, {
             bucketName: props.staticAssetsBucketName,
             enforceSSL: true,
-            websiteIndexDocument: "index.html",
-            websiteErrorDocument: "index.html",
+            publicReadAccess: false,
             removalPolicy: cdk.RemovalPolicy.DESTROY, // Automatically delete bucket during stack teardown (optional)
             autoDeleteObjects: true // Automatically delete objects during stack teardown (optional)
         });
@@ -226,12 +108,6 @@ export class CloudFrontStack extends cdk.Stack {
                     {
                         httpStatus: 403,
                         responseHttpStatus: 403,
-                        responsePagePath: "/index.html",
-                        ttl: cdk.Duration.seconds(0)
-                    },
-                    {
-                        httpStatus: 404,
-                        responseHttpStatus: 200,
                         responsePagePath: "/index.html",
                         ttl: cdk.Duration.seconds(0)
                     }
