@@ -1,6 +1,7 @@
 import { Stage, type StageProps } from "aws-cdk-lib";
 import { type Construct } from "constructs";
 import { CloudFrontStack } from "./cloudfront-stack";
+import { APPLICATION_NAME } from "../configuration";
 
 // Main deployment setup. Collection of the stacks and deployment sequence
 interface DeploymentkProps extends StageProps {
@@ -16,7 +17,7 @@ export class Deployment extends Stage {
         super(scope, id, props);
         // Deploy the main stack in the Deployment stage
 
-        new CloudFrontStack(this, `CloudFrontStack-${props.stageName}`, {
+        new CloudFrontStack(this, `${APPLICATION_NAME}CloudFrontStack`, {
             stageName: props.stageName,
             staticAssetsBucketName: props.staticAssetsBucketName,
             apiDomain: props.apiDomain,

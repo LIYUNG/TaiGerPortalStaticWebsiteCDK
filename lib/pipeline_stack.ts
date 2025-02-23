@@ -138,8 +138,8 @@ export class MyPipelineStack extends Stack {
 
             const buildStep = new CodeBuildStep(`Build-FrontEnd-${stageName}`, {
                 input: sourceStep,
-                installCommands: ["cd client", "npm install"],
-                commands: ["npm run test", "npm run build"],
+                installCommands: ["npm install"],
+                commands: ["npm run test:ci", "npm run build"],
                 env: {
                     REACT_APP_STAGE: stageName,
                     REACT_APP_PROD_URL: `https://${domain}`,
