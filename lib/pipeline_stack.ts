@@ -149,7 +149,7 @@ export class MyPipelineStack extends Stack {
                     REACT_APP_USER_POOL_CLIENT_ID: userPoolClientId, // Import UserPoolClientId
                     CI: "true"
                 },
-                primaryOutputDirectory: "client/build",
+                primaryOutputDirectory: "build",
                 projectName: `BuildProject-${stageName}`
             });
 
