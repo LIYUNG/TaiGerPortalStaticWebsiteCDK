@@ -24,7 +24,7 @@ import {
     PIPELINE_NAME
 } from "../configuration";
 import { Deployment } from "./stage";
-import { StringParameter } from "aws-cdk-lib/aws-ssm";
+// import { StringParameter } from "aws-cdk-lib/aws-ssm";
 
 export class MyPipelineStack extends Stack {
     constructor(scope: Construct, id: string, props?: StackProps) {
@@ -92,14 +92,14 @@ export class MyPipelineStack extends Stack {
             const domain = `${stageName}.${DOMAIN_NAME}`;
             const apiDomain = `${stageName}.api.${DOMAIN_NAME}`;
 
-            const taigerUserPoolId = StringParameter.valueForStringParameter(
-                this,
-                "/auth/taigerUserPoolId"
-            );
-            const userPoolClientId = StringParameter.valueForStringParameter(
-                this,
-                "/auth/taigerUserPoolClientId"
-            );
+            // const taigerUserPoolId = StringParameter.valueForStringParameter(
+            //     this,
+            //     "/auth/taigerUserPoolId"
+            // );
+            // const userPoolClientId = StringParameter.valueForStringParameter(
+            //     this,
+            //     "/auth/taigerUserPoolClientId"
+            // );
 
             const buildStep = new CodeBuildStep(`Build-FrontEnd-${stageName}`, {
                 input: sourceStep,
@@ -110,8 +110,8 @@ export class MyPipelineStack extends Stack {
                     REACT_APP_PROD_URL: `https://${domain}`,
                     REACT_APP_TENANT_ID: tenantId,
                     GENERATE_SOURCEMAP: "false",
-                    REACT_APP_USER_POOL_ID: taigerUserPoolId, // Import UserPoolId from CF Output
-                    REACT_APP_USER_POOL_CLIENT_ID: userPoolClientId, // Import UserPoolClientId
+                    // REACT_APP_USER_POOL_ID: taigerUserPoolId, // Import UserPoolId from CF Output
+                    // REACT_APP_USER_POOL_CLIENT_ID: userPoolClientId, // Import UserPoolClientId
                     CI: "true"
                 },
                 primaryOutputDirectory: "build",
