@@ -3,33 +3,19 @@ import "source-map-support/register";
 import * as cdk from "aws-cdk-lib";
 
 import { MyPipelineStack } from "../lib/pipeline_stack";
-import { Region, Stage } from "../constants";
+import { Region } from "../constants";
 import { MySlackboteStack } from "../lib/slackbot_stack";
-import { S3Stack } from "../lib/s3_stack";
 import { AWS_ACCOUNT } from "../configuration";
 
 const app = new cdk.App();
 
-const s3Beta = new S3Stack(app, "S3StackBeta", {
-    env: { region: Region.IAD, account: AWS_ACCOUNT },
-    stageName: Stage.BETA
+new MySlackboteStack(app, "TaiGerSlackboteStack", {
+    env: { region: Region.US_EAST_1, account: AWS_ACCOUNT }
 });
 
-const s3Prod = new S3Stack(app, "S3StackProd", {
-    env: { region: Region.NRT, account: AWS_ACCOUNT },
-    stageName: Stage.PROD
-});
-
-new MySlackboteStack(app, "MySlackboteStack", {
-    env: { region: Region.IAD, account: AWS_ACCOUNT }
-});
-const myPipelineStack = new MyPipelineStack(app, "TaiGerPortalStaticWebsitePipelineStack", {
-    env: { region: Region.IAD, account: AWS_ACCOUNT },
-    s3Buckets: [s3Beta, s3Prod],
+new MyPipelineStack(app, "TaiGerPortalStaticWebsitePipelineStack", {
+    env: { region: Region.US_EAST_1, account: AWS_ACCOUNT },
     crossRegionReferences: true
 });
-
-myPipelineStack.addDependency(s3Prod);
-myPipelineStack.addDependency(s3Beta);
 
 app.synth();

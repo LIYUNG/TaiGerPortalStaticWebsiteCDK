@@ -10,7 +10,7 @@ import {
 import * as codepipeline_actions from "aws-cdk-lib/aws-codepipeline-actions";
 import * as iam from "aws-cdk-lib/aws-iam";
 
-import { Region, STAGES } from "../constants";
+import { STAGES } from "../constants";
 import {
     APPLICATION_NAME,
     AWS_S3_BUCKET_DEV_FRONTEND,
@@ -24,46 +24,22 @@ import {
     PIPELINE_NAME
 } from "../configuration";
 import { Deployment } from "./stage";
-import { S3Stack } from "./s3_stack";
 import { StringParameter } from "aws-cdk-lib/aws-ssm";
-export interface MyPipelineStackProps extends StackProps {
-    s3Buckets: S3Stack[];
-}
+
 export class MyPipelineStack extends Stack {
-    constructor(scope: Construct, id: string, props?: MyPipelineStackProps) {
+    constructor(scope: Construct, id: string, props?: StackProps) {
         super(scope, id, props);
 
-        if (!props?.s3Buckets![0].s3 || !props?.s3Buckets![1].s3) {
-            throw Error("pipeline crossregion bucket missing");
-        }
-        // Create an S3 bucket in the primary region with KMS encryption
-        // const artifactBucketBeta = s3.Bucket.fromBucketAttributes(
-        //     this,
-        //     "TaiGerPipelineBucketBeta",
-        //     {
-        //         bucketName: `taigerpipeline-artifact-${Stage.BETA}`.toLowerCase(),
-        //         region: Region.IAD,
-        //         encryptionKey: props?.s3Buckets![0].kmsKey
-        //     }
-        // );
-
-        // const artifactBucketProd = s3.Bucket.fromBucketAttributes(
-        //     this,
-        //     "TaiGerPipelineBucketProd",
-        //     {
-        //         bucketName: `taigerpipeline-artifact-${Stage.PROD}`.toLowerCase(),
-        //         region: Region.NRT,
-        //         encryptionKey: props?.s3Buckets![1].kmsKey
-        //     }
-        // );
-
-        // const artifactBucketProd = new s3.Bucket(this, "TaiGerPipelineBucketProd", {
-        //     encryption: s3.BucketEncryption.KMS,
-        //     encryptionKey: kmsKey,
-        //     removalPolicy: RemovalPolicy.DESTROY
-        // });
-
         // Create the IAM Role with Admin permissions
+        const source = CodePipelineSource.gitHub(
+            `${GITHUB_OWNER}/${GITHUB_CDK_REPO}`,
+            GITHUB_PACKAGE_BRANCH,
+            {
+                authentication: SecretValue.secretsManager(GITHUB_TOKEN),
+                trigger: codepipeline_actions.GitHubTrigger.WEBHOOK
+            }
+        );
+
         const adminRole = new iam.Role(this, "PipelineAdminRole", {
             assumedBy: new iam.ServicePrincipal("codepipeline.amazonaws.com"),
             managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName("AdministratorAccess")]
@@ -86,22 +62,10 @@ export class MyPipelineStack extends Stack {
         const pipeline = new CodePipeline(this, `${PIPELINE_NAME}`, {
             // artifactBucket: artifactBucket,
             pipelineName: `${PIPELINE_NAME}`,
-            crossAccountKeys: true,
             synth: new ShellStep("Synth", {
-                input: CodePipelineSource.gitHub(
-                    `${GITHUB_OWNER}/${GITHUB_CDK_REPO}`,
-                    GITHUB_PACKAGE_BRANCH,
-                    {
-                        authentication: SecretValue.secretsManager(GITHUB_TOKEN),
-                        trigger: codepipeline_actions.GitHubTrigger.WEBHOOK
-                    }
-                ),
+                input: source,
                 commands: ["npm ci", "npm run build", "npx cdk synth"]
             }),
-            crossRegionReplicationBuckets: {
-                [Region.IAD]: props.s3Buckets![0].s3,
-                [Region.NRT]: props.s3Buckets![1].s3
-            },
             role: adminRole,
             codeBuildDefaults: {
                 rolePolicy: [

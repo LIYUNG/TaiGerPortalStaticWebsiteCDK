@@ -7,6 +7,8 @@ import * as s3 from "aws-cdk-lib/aws-s3";
 import * as certificatemanager from "aws-cdk-lib/aws-certificatemanager";
 
 import { DOMAIN_NAME } from "../configuration";
+import { Stage } from "../constants/stages";
+import { CloudFrontTarget } from "aws-cdk-lib/aws-route53-targets";
 
 interface CloudFrontStackProps extends cdk.StackProps {
     stageName: string;
@@ -118,12 +120,21 @@ export class CloudFrontStack extends cdk.Stack {
             }
         );
 
-        // Create a CNAME record for the subdomain
-        new route53.CnameRecord(this, `TaiGerPortalStaticWebsiteCnameRecord-${stageName}`, {
-            zone: hostedZone,
-            recordName: props.domain, // Your subdomain
-            domainName: this.distribution.distributionDomainName
-        });
+        if (props.stageName === Stage.PROD) {
+            // Create a CNAME record for the subdomain
+            new route53.ARecord(this, `TaiGerPortalStaticWebsiteCnameRecord-${stageName}`, {
+                zone: hostedZone,
+                recordName: props.domain, // Your subdomain
+                target: route53.RecordTarget.fromAlias(new CloudFrontTarget(this.distribution))
+            });
+        } else {
+            // Create a CNAME record for the subdomain
+            new route53.CnameRecord(this, `TaiGerPortalStaticWebsiteCnameRecord-${stageName}`, {
+                zone: hostedZone,
+                recordName: props.domain, // Your subdomain
+                domainName: this.distribution.distributionDomainName
+            });
+        }
 
         // Output the CloudFront distribution ID
         new cdk.CfnOutput(this, "CloudFrontDistributionId", {
