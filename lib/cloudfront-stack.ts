@@ -6,9 +6,11 @@ import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as certificatemanager from "aws-cdk-lib/aws-certificatemanager";
 
-import { DOMAIN_NAME } from "../configuration";
+import { APPLICATION_NAME, DOMAIN_NAME } from "../configuration";
 import { Stage } from "../constants/stages";
 import { CloudFrontTarget } from "aws-cdk-lib/aws-route53-targets";
+import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
+import { Runtime } from "aws-cdk-lib/aws-lambda";
 
 interface CloudFrontStackProps extends cdk.StackProps {
     stageName: string;
@@ -34,6 +36,25 @@ export class CloudFrontStack extends cdk.Stack {
             removalPolicy: cdk.RemovalPolicy.DESTROY, // Automatically delete bucket during stack teardown (optional)
             autoDeleteObjects: true // Automatically delete objects during stack teardown (optional)
         });
+
+        const edgeBucketRequestFunction = new NodejsFunction(
+            this,
+            `${APPLICATION_NAME}-OriginBucketRequest-${props.stageName}`,
+            {
+                functionName: `${APPLICATION_NAME}-OriginBucketRequest-${props.stageName}`,
+                runtime: Runtime.NODEJS_20_X,
+                handler: "handler",
+                entry: "src/bucketRequest.ts",
+                description: "Rewrites non-file paths to /index.html",
+                bundling: {
+                    esbuildArgs: { "--bundle": true },
+                    target: "es2020",
+                    platform: "node",
+                    minify: true
+                },
+                architecture: cdk.aws_lambda.Architecture.X86_64
+            }
+        );
 
         const oac = new cloudfront.S3OriginAccessControl(this, `OAC-${stageName}`, {
             signing: cloudfront.Signing.SIGV4_NO_OVERRIDE
@@ -78,6 +99,12 @@ export class CloudFrontStack extends cdk.Stack {
                     viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
                     allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
                     cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+                    edgeLambdas: [
+                        {
+                            eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
+                            functionVersion: edgeBucketRequestFunction.currentVersion
+                        }
+                    ],
                     compress: true
                 },
                 additionalBehaviors: {
@@ -106,14 +133,6 @@ export class CloudFrontStack extends cdk.Stack {
                         compress: true
                     }
                 },
-                errorResponses: [
-                    {
-                        httpStatus: 403,
-                        responseHttpStatus: 403,
-                        responsePagePath: "/index.html",
-                        ttl: cdk.Duration.seconds(0)
-                    }
-                ],
                 domainNames: [props.domain],
                 certificate: certificate,
                 priceClass: cloudfront.PriceClass.PRICE_CLASS_ALL
