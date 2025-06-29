@@ -4,6 +4,7 @@ import {
     CodeBuildStep,
     CodePipeline,
     CodePipelineSource,
+    ManualApprovalStep,
     // ManualApprovalStep,
     ShellStep
 } from "aws-cdk-lib/pipelines";
@@ -147,10 +148,21 @@ export class MyPipelineStack extends Stack {
                 ]
             });
 
-            pipeline.addStage(Stage, {
-                pre: [buildStep],
-                post: [deployStep, invalidateCacheStep]
+            const approvalStep = new ManualApprovalStep("ApproveIfStable", {
+                comment:
+                    "Approve to continue production deployment. Make sure every changes are verified in dev."
             });
+            if (isProd) {
+                pipeline.addStage(Stage, {
+                    pre: [buildStep],
+                    post: [deployStep, invalidateCacheStep]
+                });
+            } else {
+                pipeline.addStage(Stage, {
+                    pre: [buildStep],
+                    post: [deployStep, invalidateCacheStep, approvalStep]
+                });
+            }
         });
     }
 }
