@@ -91,7 +91,7 @@ export class MyPipelineStack extends Stack {
         STAGES.forEach(({ stageName, staticAssetsBucketName, tenantId, isProd, env }) => {
             // CodeBuild project
             const domain = `${stageName}.${DOMAIN_NAME}`;
-            const apiDomain = `${stageName}.api.${DOMAIN_NAME}`;
+            const apiDomain = `api.ecs.${domain}`;
 
             // const taigerUserPoolId = StringParameter.valueForStringParameter(
             //     this,
