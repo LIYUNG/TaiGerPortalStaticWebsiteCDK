@@ -64,16 +64,16 @@ export class CloudFrontStack extends cdk.Stack {
             originAccessControl: oac
         });
 
-        // Define the ACM certificate
-        const certificate = certificatemanager.Certificate.fromCertificateArn(
-            this,
-            "Certificate",
-            "arn:aws:acm:us-east-1:669131042313:certificate/44845b4a-61c2-4b9c-8d80-755890a1838e"
-        );
-
         // Look up the existing hosted zone for your domain
         const hostedZone = route53.HostedZone.fromLookup(this, `MyHostedZone-${stageName}`, {
             domainName: DOMAIN_NAME // Your domain name
+        });
+
+        // Define the ACM certificate
+        const certificate = new certificatemanager.Certificate(this, "Certificate", {
+            certificateName: `taiger-portal-certificate-${props.stageName}`,
+            domainName: props.domain,
+            validation: certificatemanager.CertificateValidation.fromDns(hostedZone)
         });
 
         const originRequestPolicy = new cloudfront.OriginRequestPolicy(
