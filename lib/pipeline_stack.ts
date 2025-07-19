@@ -8,6 +8,7 @@ import {
     // ManualApprovalStep,
     ShellStep
 } from "aws-cdk-lib/pipelines";
+import { PipelineType } from "aws-cdk-lib/aws-codepipeline";
 import * as codepipeline_actions from "aws-cdk-lib/aws-codepipeline-actions";
 import * as iam from "aws-cdk-lib/aws-iam";
 
@@ -63,6 +64,7 @@ export class MyPipelineStack extends Stack {
         const pipeline = new CodePipeline(this, `${PIPELINE_NAME}`, {
             // artifactBucket: artifactBucket,
             pipelineName: `${PIPELINE_NAME}`,
+            pipelineType: PipelineType.V2,
             synth: new ShellStep("Synth", {
                 input: source,
                 commands: ["npm ci", "npm run build", "npx cdk synth"]
