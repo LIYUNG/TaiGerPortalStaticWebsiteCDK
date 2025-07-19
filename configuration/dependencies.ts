@@ -28,5 +28,3 @@ export const TENANT_ID_DEV = `TaiGer`;
 export const AWS_S3_BUCKET_PROD_FRONTEND = "arn:aws:s3:::taiger-file-storage-production-website";
 export const STATIC_ASSETS_BUCKET_PROD = "taiger-production-static-website";
 export const TENANT_ID_PRDO = `TaiGer_Prod`;
-
-export const AWS_CODEPIPELINE_APPROVER_EMAIL = "taiger.leoc@gmail.com";

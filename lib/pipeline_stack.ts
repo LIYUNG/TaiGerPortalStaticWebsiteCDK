@@ -90,7 +90,7 @@ export class MyPipelineStack extends Stack {
 
         STAGES.forEach(({ stageName, staticAssetsBucketName, tenantId, isProd, env }) => {
             // CodeBuild project
-            const domain = `${stageName}.${DOMAIN_NAME}`;
+            const domain = isProd ? `${DOMAIN_NAME}` : `${stageName}.${DOMAIN_NAME}`;
             const apiDomain = `api.ecs.${domain}`;
 
             // const taigerUserPoolId = StringParameter.valueForStringParameter(
@@ -118,11 +118,6 @@ export class MyPipelineStack extends Stack {
                 primaryOutputDirectory: "build",
                 projectName: `BuildProject-${stageName}`
             });
-
-            // // Manual approval action
-            // const approvalStep = new ManualApprovalStep(`Approval-${stageName}`, {
-            //     email: AWS_CODEPIPELINE_APPROVER_EMAIL
-            // });
 
             // Add stages to the pipeline
             const Stage = new Deployment(this, `BuildDeployStage-${stageName}`, {
@@ -154,13 +149,13 @@ export class MyPipelineStack extends Stack {
             });
             if (isProd) {
                 pipeline.addStage(Stage, {
-                    pre: [buildStep],
+                    pre: [approvalStep, buildStep],
                     post: [deployStep, invalidateCacheStep]
                 });
             } else {
                 pipeline.addStage(Stage, {
                     pre: [buildStep],
-                    post: [deployStep, invalidateCacheStep, approvalStep]
+                    post: [deployStep, invalidateCacheStep]
                 });
             }
         });
