@@ -65,7 +65,7 @@ export class MyPipelineStack extends Stack {
             pipelineName: `${PIPELINE_NAME}`,
             synth: new ShellStep("Synth", {
                 input: source,
-                commands: ["npm ci", "npm run test:ci", "npx cdk synth"]
+                commands: ["npm ci", "npm run build", "npx cdk synth"]
             }),
             role: adminRole,
             codeBuildDefaults: {
@@ -105,7 +105,7 @@ export class MyPipelineStack extends Stack {
             const buildStep = new CodeBuildStep(`Build-FrontEnd-${stageName}`, {
                 input: sourceStep,
                 installCommands: ["npm install"],
-                commands: ["npm run build"],
+                commands: ["npm run test:ci", "npm run build"],
                 env: {
                     REACT_APP_STAGE: stageName,
                     REACT_APP_PROD_URL: `https://${domain}`,
