@@ -81,7 +81,10 @@ export class CloudFrontStack extends cdk.Stack {
             "TaiGerPortalOriginRequestPolicy",
             {
                 originRequestPolicyName: `taiger-portal-origin-request-policy-${props.stageName}`,
-                headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList("tenantid"),
+                headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList(
+                    "tenantid",
+                    "Accept-Encoding"
+                ),
                 queryStringBehavior: cloudfront.OriginRequestQueryStringBehavior.all(), // Forward all query strings
                 cookieBehavior: cloudfront.OriginRequestCookieBehavior.all()
             }
