@@ -107,7 +107,7 @@ export class CloudFrontStack extends cdk.Stack {
             this,
             `${APPLICATION_NAME}-CachePolicy-${props.stageName}`,
             {
-                cachePolicyName: "gzip-accept-encoding",
+                cachePolicyName: `gzip-accept-encoding-${props.stageName}`,
                 defaultTtl: Duration.seconds(0),
                 minTtl: Duration.seconds(0),
                 maxTtl: Duration.seconds(1),
