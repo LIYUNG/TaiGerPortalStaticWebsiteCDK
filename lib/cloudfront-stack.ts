@@ -57,29 +57,41 @@ export class CloudFrontStack extends cdk.Stack {
             }
         );
 
-        const oac = new cloudfront.S3OriginAccessControl(this, `OAC-${stageName}`, {
-            signing: cloudfront.Signing.SIGV4_NO_OVERRIDE
-        });
+        const oac = new cloudfront.S3OriginAccessControl(
+            this,
+            `${APPLICATION_NAME}-OAC-${stageName}`,
+            {
+                signing: cloudfront.Signing.SIGV4_NO_OVERRIDE
+            }
+        );
 
         const s3Origin = origins.S3BucketOrigin.withOriginAccessControl(websiteBucket, {
             originAccessControl: oac
         });
 
         // Look up the existing hosted zone for your domain
-        const hostedZone = route53.HostedZone.fromLookup(this, `MyHostedZone-${stageName}`, {
-            domainName: DOMAIN_NAME // Your domain name
-        });
+        const hostedZone = route53.HostedZone.fromLookup(
+            this,
+            `${APPLICATION_NAME}-HostedZone-${stageName}`,
+            {
+                domainName: DOMAIN_NAME // Your domain name
+            }
+        );
 
         // Define the ACM certificate
-        const certificate = new certificatemanager.Certificate(this, "Certificate", {
-            certificateName: `taiger-portal-certificate-${props.stageName}`,
-            domainName: props.domain,
-            validation: certificatemanager.CertificateValidation.fromDns(hostedZone)
-        });
+        const certificate = new certificatemanager.Certificate(
+            this,
+            `${APPLICATION_NAME}-Certificate-${props.stageName}`,
+            {
+                certificateName: `${APPLICATION_NAME}-Certificate-${props.stageName}`,
+                domainName: props.domain,
+                validation: certificatemanager.CertificateValidation.fromDns(hostedZone)
+            }
+        );
 
         const originRequestPolicy = new cloudfront.OriginRequestPolicy(
             this,
-            "TaiGerPortalOriginRequestPolicy",
+            `${APPLICATION_NAME}-OriginRequestPolicy-${props.stageName}`,
             {
                 originRequestPolicyName: `taiger-portal-origin-request-policy-${props.stageName}`,
                 headerBehavior: cloudfront.OriginRequestHeaderBehavior.allowList("tenantid"),
@@ -91,13 +103,17 @@ export class CloudFrontStack extends cdk.Stack {
         const apiGatewayOrigin = new origins.HttpOrigin(props.apiDomain);
 
         // no cahcing:
-        const acceptEncodingCachePolicy = new cloudfront.CachePolicy(this, "CachePolicy", {
-            cachePolicyName: "gzip-accept-encoding",
-            defaultTtl: Duration.seconds(0),
-            minTtl: Duration.seconds(0),
-            maxTtl: Duration.seconds(1),
-            enableAcceptEncodingGzip: true
-        });
+        const acceptEncodingCachePolicy = new cloudfront.CachePolicy(
+            this,
+            `${APPLICATION_NAME}-CachePolicy-${props.stageName}`,
+            {
+                cachePolicyName: "gzip-accept-encoding",
+                defaultTtl: Duration.seconds(0),
+                minTtl: Duration.seconds(0),
+                maxTtl: Duration.seconds(1),
+                enableAcceptEncodingGzip: true
+            }
+        );
         // Create the CloudFront distribution
         this.distribution = new cloudfront.Distribution(
             this,
