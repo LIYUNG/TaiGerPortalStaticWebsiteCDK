@@ -90,76 +90,88 @@ export class MyPipelineStack extends Stack {
             }
         );
 
-        STAGES.forEach(({ stageName, staticAssetsBucketName, tenantId, isProd, env }) => {
-            // CodeBuild project
-            const domain = isProd ? `${DOMAIN_NAME}` : `${stageName}.${DOMAIN_NAME}`;
-            const apiDomain = `api.ecs.${stageName}.${DOMAIN_NAME}`;
-
-            // const taigerUserPoolId = StringParameter.valueForStringParameter(
-            //     this,
-            //     "/auth/taigerUserPoolId"
-            // );
-            // const userPoolClientId = StringParameter.valueForStringParameter(
-            //     this,
-            //     "/auth/taigerUserPoolClientId"
-            // );
-
-            const buildStep = new CodeBuildStep(`Build-FrontEnd-${stageName}`, {
-                input: sourceStep,
-                installCommands: ["npm install"],
-                commands: ["npm run test:ci", "npm run build"],
-                env: {
-                    REACT_APP_STAGE: stageName,
-                    REACT_APP_PROD_URL: `https://${domain}`,
-                    REACT_APP_TENANT_ID: tenantId,
-                    GENERATE_SOURCEMAP: "false",
-                    // REACT_APP_USER_POOL_ID: taigerUserPoolId, // Import UserPoolId from CF Output
-                    // REACT_APP_USER_POOL_CLIENT_ID: userPoolClientId, // Import UserPoolClientId
-                    CI: "true"
-                },
-                primaryOutputDirectory: "build",
-                projectName: `BuildProject-${stageName}`
-            });
-
-            // Add stages to the pipeline
-            const Stage = new Deployment(this, `BuildDeployStage-${stageName}`, {
+        STAGES.forEach(
+            ({
                 stageName,
-                apiDomain,
-                domain,
+                staticAssetsBucketName,
+                tenantId,
                 isProd,
-                env: { region: env.region, account: env.account },
-                staticAssetsBucketName
-            });
+                env,
+                REACT_APP_GOOGLE_CLIENT_ID,
+                REACT_APP_GOOGLE_REDIRECT_URL
+            }) => {
+                // CodeBuild project
+                const domain = isProd ? `${DOMAIN_NAME}` : `${stageName}.${DOMAIN_NAME}`;
+                const apiDomain = `api.ecs.${stageName}.${DOMAIN_NAME}`;
 
-            const deployStep = new ShellStep(`Deploy-FrontEnd-${stageName}`, {
-                input: buildStep,
-                commands: ["ls", `aws s3 sync . s3://${staticAssetsBucketName}`]
-            });
+                // const taigerUserPoolId = StringParameter.valueForStringParameter(
+                //     this,
+                //     "/auth/taigerUserPoolId"
+                // );
+                // const userPoolClientId = StringParameter.valueForStringParameter(
+                //     this,
+                //     "/auth/taigerUserPoolClientId"
+                // );
 
-            const invalidateCacheStep = new ShellStep(`InvalidateCache-${stageName}`, {
-                commands: [
-                    // Fetch CloudFront Distribution ID using AWS CLI
-                    `CLOUDFRONT_ID=$(aws cloudformation describe-stacks --stack-name ${stageName}-${APPLICATION_NAME}CloudFrontStack --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionId'].OutputValue" --output text)`,
-                    // Use the fetched CloudFront ID to create invalidation
-                    `aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_ID --paths "/*"`
-                ]
-            });
-
-            const approvalStep = new ManualApprovalStep("ApproveIfStable", {
-                comment:
-                    "Approve to continue production deployment. Make sure every changes are verified in dev."
-            });
-            if (isProd) {
-                pipeline.addStage(Stage, {
-                    pre: [approvalStep, buildStep],
-                    post: [deployStep, invalidateCacheStep]
+                const buildStep = new CodeBuildStep(`Build-FrontEnd-${stageName}`, {
+                    input: sourceStep,
+                    installCommands: ["npm install"],
+                    commands: ["npm run test:ci", "npm run build"],
+                    env: {
+                        REACT_APP_STAGE: stageName,
+                        REACT_APP_PROD_URL: `https://${domain}`,
+                        REACT_APP_TENANT_ID: tenantId,
+                        REACT_APP_GOOGLE_CLIENT_ID: REACT_APP_GOOGLE_CLIENT_ID,
+                        REACT_APP_GOOGLE_REDIRECT_URL: REACT_APP_GOOGLE_REDIRECT_URL,
+                        GENERATE_SOURCEMAP: "false",
+                        // REACT_APP_USER_POOL_ID: taigerUserPoolId, // Import UserPoolId from CF Output
+                        // REACT_APP_USER_POOL_CLIENT_ID: userPoolClientId, // Import UserPoolClientId
+                        CI: "true"
+                    },
+                    primaryOutputDirectory: "build",
+                    projectName: `BuildProject-${stageName}`
                 });
-            } else {
-                pipeline.addStage(Stage, {
-                    pre: [buildStep],
-                    post: [deployStep, invalidateCacheStep]
+
+                // Add stages to the pipeline
+                const Stage = new Deployment(this, `BuildDeployStage-${stageName}`, {
+                    stageName,
+                    apiDomain,
+                    domain,
+                    isProd,
+                    env: { region: env.region, account: env.account },
+                    staticAssetsBucketName
                 });
+
+                const deployStep = new ShellStep(`Deploy-FrontEnd-${stageName}`, {
+                    input: buildStep,
+                    commands: ["ls", `aws s3 sync . s3://${staticAssetsBucketName}`]
+                });
+
+                const invalidateCacheStep = new ShellStep(`InvalidateCache-${stageName}`, {
+                    commands: [
+                        // Fetch CloudFront Distribution ID using AWS CLI
+                        `CLOUDFRONT_ID=$(aws cloudformation describe-stacks --stack-name ${stageName}-${APPLICATION_NAME}CloudFrontStack --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionId'].OutputValue" --output text)`,
+                        // Use the fetched CloudFront ID to create invalidation
+                        `aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_ID --paths "/*"`
+                    ]
+                });
+
+                const approvalStep = new ManualApprovalStep("ApproveIfStable", {
+                    comment:
+                        "Approve to continue production deployment. Make sure every changes are verified in dev."
+                });
+                if (isProd) {
+                    pipeline.addStage(Stage, {
+                        pre: [approvalStep, buildStep],
+                        post: [deployStep, invalidateCacheStep]
+                    });
+                } else {
+                    pipeline.addStage(Stage, {
+                        pre: [buildStep],
+                        post: [deployStep, invalidateCacheStep]
+                    });
+                }
             }
-        });
+        );
     }
 }
