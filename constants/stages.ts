@@ -22,7 +22,7 @@ export const STAGES = [
         REACT_APP_GOOGLE_CLIENT_ID:
             "867322734152-0agpur3trvqr4s5rrpbp2j6hallrd2d1.apps.googleusercontent.com",
         REACT_APP_GOOGLE_REDIRECT_URL:
-            "https://beta.taigerconsultancy-portal.com/auth/google/verify"
+            "https://beta.taigerconsultancy-portal.com/account/google/verify"
     },
     {
         stageName: Stage.PROD,
@@ -32,6 +32,6 @@ export const STAGES = [
         tenantId: TENANT_ID_PRDO,
         REACT_APP_GOOGLE_CLIENT_ID:
             "867322734152-1u991odgfgvskcgpjfo1r1vdfcon119p.apps.googleusercontent.com",
-        REACT_APP_GOOGLE_REDIRECT_URL: "https://taigerconsultancy-portal.com/auth/google/verify"
+        REACT_APP_GOOGLE_REDIRECT_URL: "https://taigerconsultancy-portal.com/account/google/verify"
     }
 ];
