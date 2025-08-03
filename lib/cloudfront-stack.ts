@@ -98,7 +98,8 @@ export class CloudFrontStack extends cdk.Stack {
                 handler: "handler",
                 bundling: {
                     define: {
-                        "process.env.JWT_SECRET": JSON.stringify(jwtSecret)
+                        "process.env.JWT_SECRET": JSON.stringify(jwtSecret),
+                        "process.env.AWS_REGION": JSON.stringify(props.env?.region)
                     },
                     esbuildArgs: { "--bundle": true },
                     target: "es2020",
