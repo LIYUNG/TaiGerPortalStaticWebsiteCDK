@@ -104,13 +104,13 @@ export const handler = async (event: CloudFrontRequestEvent): Promise<CloudFront
         const request: CloudFrontRequest = event.Records[0].cf.request;
         const uri: string = request.uri;
 
-        // Handle crm requests by removing the /crm/ prefix
-        if (uri.startsWith("/crm/")) {
-            console.log(`Processing crm request: ${uri}`);
-            // Remove the /crm/ prefix from the URI
-            const newUri = uri.replace(/^\/crm\//, "/");
+        // Handle crm-api requests by removing the /crm-api/ prefix
+        if (uri.startsWith("/crm-api/")) {
+            console.log(`Processing crm-api request: ${uri}`);
+            // Remove the /crm-api/ prefix from the URI
+            const newUri = uri.replace(/^\/crm-api\//, "/");
             request.uri = newUri;
-            console.log(`Modified URI for crm request: ${newUri}`);
+            console.log(`Modified URI for crm-api request: ${newUri}`);
             return sigV4SignCloudFrontRequest(request);
         }
 

@@ -219,7 +219,7 @@ export class CloudFrontStack extends cdk.Stack {
                         originRequestPolicy,
                         compress: true
                     },
-                    "/crm/*": {
+                    "/crm-api/*": {
                         origin: crmApiGatewayOrigin,
                         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
                         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
