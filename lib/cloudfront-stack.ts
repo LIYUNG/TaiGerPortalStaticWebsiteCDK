@@ -178,6 +178,22 @@ export class CloudFrontStack extends cdk.Stack {
                 enableAcceptEncodingGzip: true
             }
         );
+
+        const apiResponseHeadersPolicy = new cloudfront.ResponseHeadersPolicy(
+            this,
+            `TaiGerPortalApiResponseHeadersPolicy-${props.stageName}`,
+            {
+                responseHeadersPolicyName: `taiger-portal-api-response-headers-${props.stageName}`,
+                corsBehavior: {
+                    accessControlAllowCredentials: true,
+                    accessControlAllowOrigins: ["http://localhost:3006"], // ✅ Explicitly allow frontend
+                    accessControlAllowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+                    accessControlAllowHeaders: ["Authorization", "Content-Type", "X-auth"],
+                    accessControlExposeHeaders: ["Authorization"], // If API returns auth headers
+                    originOverride: true // Ensures this header is always set
+                }
+            }
+        );
         // Create the CloudFront distribution
         this.distribution = new cloudfront.Distribution(
             this,
@@ -227,6 +243,9 @@ export class CloudFrontStack extends cdk.Stack {
                         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
                         cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
                         originRequestPolicy,
+                        ...(!props.isProd && {
+                            responseHeadersPolicy: apiResponseHeadersPolicy
+                        }),
                         edgeLambdas: [
                             {
                                 eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
