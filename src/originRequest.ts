@@ -45,6 +45,12 @@ const sigV4SignCloudFrontRequest = async (
     const region = process.env.AWS_REGION!;
     const canonicalURI = request.uri;
 
+    // Handle query string properly
+    let queryString = "";
+    if (request.querystring) {
+        queryString = request.querystring;
+    }
+
     const signer = new SignatureV4({
         region: region,
         service: service,
@@ -71,10 +77,13 @@ const sigV4SignCloudFrontRequest = async (
         decodedBody = bodyBuffer.toString("utf8");
     }
 
+    // Build the full path including query string
+    const fullPath = queryString ? `${canonicalURI}?${queryString}` : canonicalURI;
+
     const signedRequest = await signer.sign({
         method: request.method,
         hostname: cloudfrontOrigin!,
-        path: canonicalURI,
+        path: fullPath,
         protocol: "https:",
         headers: {
             host: cloudfrontOrigin!
