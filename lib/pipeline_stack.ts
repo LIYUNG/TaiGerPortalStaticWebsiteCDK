@@ -60,14 +60,30 @@ export class MyPipelineStack extends Stack {
 
         adminRole.addToPolicy(s3AccessPolicy);
 
+        const keyPreBetafix = `/taiger/portal/backend/beta`;
+        const keyPrefixProd = `/taiger/portal/backend/prod`;
+        const fetchJWTSecretStep = new CodeBuildStep(`FetchJWTSecret`, {
+            primaryOutputDirectory: ".",
+            commands: [
+                `aws ssm get-parameter --name "${keyPreBetafix}/jwt-secret" --with-decryption --query "Parameter.Value" --output text > jwtSecret_beta.txt`,
+                `aws ssm get-parameter --name "${keyPrefixProd}/jwt-secret" --with-decryption --query "Parameter.Value" --output text > jwtSecret_prod.txt`
+            ]
+        });
+
         // Create the high-level CodePipeline
         const pipeline = new CodePipeline(this, `${PIPELINE_NAME}`, {
-            // artifactBucket: artifactBucket,
             pipelineName: `${PIPELINE_NAME}`,
             pipelineType: PipelineType.V2,
             synth: new ShellStep("Synth", {
                 input: source,
-                commands: ["npm ci", "npm run build", "npx cdk synth"]
+                additionalInputs: {
+                    "../dist": fetchJWTSecretStep
+                },
+                commands: [
+                    "npm ci",
+                    "npm run build",
+                    "npx cdk synth -c jwtSecret_beta=$(cat ../dist/jwtSecret_beta.txt) -c jwtSecret_prod=$(cat ../dist/jwtSecret_prod.txt)"
+                ]
             }),
             role: adminRole,
             codeBuildDefaults: {

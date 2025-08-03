@@ -12,7 +12,6 @@ import { CloudFrontTarget } from "aws-cdk-lib/aws-route53-targets";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { Runtime, Tracing } from "aws-cdk-lib/aws-lambda";
 import { Duration } from "aws-cdk-lib";
-import { SsmParameters } from "../constructs/parameter-store";
 import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
 
 interface CloudFrontStackProps extends cdk.StackProps {
@@ -32,14 +31,7 @@ export class CloudFrontStack extends cdk.Stack {
         // Ensure props is defined and destructure safely
         const stageName = props.stageName;
 
-        // const keyPrefix = `/tenfoldai/backend/config/${props.stageName}`;
-        const keyPrefix = `/taiger/portal/backend/${props.stageName}`;
-        const secrets = new SsmParameters(this, `Secrets-${props.stageName}`, {
-            parameterNames: {
-                JWT_SECRET: `${keyPrefix}/jwt-secret`,
-                JWT_EXPIRE: `${keyPrefix}/jwt-expire`
-            }
-        });
+        const jwtSecret = this.node.tryGetContext(`jwtSecret_${stageName}`) || "123";
 
         // S3 Bucket for static website hosting
         const websiteBucket = new s3.Bucket(this, `TaiGer-Frontend-Bucket-${stageName}`, {
@@ -52,9 +44,9 @@ export class CloudFrontStack extends cdk.Stack {
 
         const edgeBucketRequestFunction = new NodejsFunction(
             this,
-            `${APPLICATION_NAME}-OriginBucketRequest-${props.stageName}`,
+            `${APPLICATION_NAME}-OriginBucketRequest-${stageName}`,
             {
-                functionName: `${APPLICATION_NAME}-OriginBucketRequest-${props.stageName}`,
+                functionName: `${APPLICATION_NAME}-OriginBucketRequest-${stageName}`,
                 runtime: Runtime.NODEJS_20_X,
                 handler: "handler",
                 entry: "src/bucketRequest.ts",
@@ -82,7 +74,7 @@ export class CloudFrontStack extends cdk.Stack {
                     )
                 ],
                 //this role in case no value is provided
-                roleName: `${APPLICATION_NAME}-OriginRequest-${props.stageName}-Role`
+                roleName: `${APPLICATION_NAME}-OriginRequest-${stageName}-Role`
             }
         );
 
@@ -97,17 +89,16 @@ export class CloudFrontStack extends cdk.Stack {
 
         const edgeOriginRequestFunction = new NodejsFunction(
             this,
-            `${APPLICATION_NAME}-OriginRequest-${props.stageName}`,
+            `${APPLICATION_NAME}-OriginRequest-${stageName}`,
             {
-                functionName: `${APPLICATION_NAME}-OriginRequestV2-${props.stageName}`,
-                description: "Lambda@Edge function for origin request of Customer Portal",
+                functionName: `${APPLICATION_NAME}-OriginRequest-${stageName}`,
+                description: "Lambda@Edge function for origin request of TaiGer Portal",
                 runtime: Runtime.NODEJS_20_X,
                 entry: "src/originRequest.ts",
                 handler: "handler",
                 bundling: {
                     define: {
-                        "process.env.JWT_SECRET": JSON.stringify(secrets.values["JWT_SECRET"]),
-                        "process.env.JWT_EXPIRE": JSON.stringify(secrets.values["JWT_EXPIRE"])
+                        "process.env.JWT_SECRET": JSON.stringify(jwtSecret)
                     },
                     esbuildArgs: { "--bundle": true },
                     target: "es2020",
