@@ -2,6 +2,7 @@ import { CloudFrontRequestEvent, CloudFrontRequest } from "aws-lambda";
 import { SignatureV4 } from "@aws-sdk/signature-v4";
 import { Sha256 } from "@aws-crypto/sha256-js";
 import * as jwt from "jsonwebtoken";
+import { parse } from "querystring";
 
 const sigV4SignCloudFrontRequest = async (
     request: CloudFrontRequest
@@ -46,9 +47,9 @@ const sigV4SignCloudFrontRequest = async (
     const canonicalURI = request.uri;
 
     // Handle query string properly
-    let queryString = "";
+    let query = {};
     if (request.querystring) {
-        queryString = request.querystring;
+        query = parse(request.querystring);
     }
 
     const signer = new SignatureV4({
@@ -78,16 +79,16 @@ const sigV4SignCloudFrontRequest = async (
     }
 
     // Build the full path including query string
-    const fullPath = queryString ? `${canonicalURI}?${queryString}` : canonicalURI;
 
     const signedRequest = await signer.sign({
         method: request.method,
         hostname: cloudfrontOrigin!,
-        path: fullPath,
+        path: canonicalURI,
         protocol: "https:",
         headers: {
             host: cloudfrontOrigin!
         },
+        query: query,
         body: decodedBody
     });
 
@@ -101,11 +102,6 @@ const sigV4SignCloudFrontRequest = async (
         ];
     }
     console.log(`signedRequest: ${JSON.stringify(signedRequest)}`);
-
-    const signedQueryString = signedRequest.path?.split("?")[0];
-    console.log(`signedQueryString: ${signedQueryString}`);
-
-    request.querystring = signedQueryString!;
 
     console.log(`SigV4-signed request headers: ${JSON.stringify(request.headers)}`);
 
