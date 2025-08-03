@@ -102,10 +102,15 @@ const sigV4SignCloudFrontRequest = async (
     }
     console.log(`signedRequest: ${JSON.stringify(signedRequest)}`);
 
-    const signedQueryString = signedRequest.path?.split("?")[0];
+    // Extract query string from signed request path if it exists
+    const pathParts = signedRequest.path?.split("?");
+    const signedQueryString = pathParts && pathParts.length > 1 ? pathParts[1] : "";
     console.log(`signedQueryString: ${signedQueryString}`);
 
-    request.querystring = signedQueryString!;
+    // Update the request querystring with the signed version
+    if (signedQueryString) {
+        request.querystring = signedQueryString;
+    }
 
     console.log(`SigV4-signed request headers: ${JSON.stringify(request.headers)}`);
 
