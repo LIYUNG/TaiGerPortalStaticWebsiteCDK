@@ -112,6 +112,7 @@ export class MyPipelineStack extends Stack {
                 staticAssetsBucketName,
                 tenantId,
                 isProd,
+                apiOriginRegion,
                 env,
                 REACT_APP_GOOGLE_CLIENT_ID,
                 REACT_APP_GOOGLE_REDIRECT_URL
@@ -156,6 +157,7 @@ export class MyPipelineStack extends Stack {
                     crmApiDomain,
                     domain,
                     isProd,
+                    apiOriginRegion: apiOriginRegion,
                     env: { region: env.region, account: env.account },
                     staticAssetsBucketName
                 });

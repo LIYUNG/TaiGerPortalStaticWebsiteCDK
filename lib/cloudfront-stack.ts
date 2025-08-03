@@ -17,6 +17,7 @@ import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
 interface CloudFrontStackProps extends cdk.StackProps {
     stageName: string;
     domain: string;
+    apiOriginRegion: string;
     apiDomain: string;
     crmApiDomain: string;
     staticAssetsBucketName: string;
@@ -99,7 +100,7 @@ export class CloudFrontStack extends cdk.Stack {
                 bundling: {
                     define: {
                         "process.env.JWT_SECRET": JSON.stringify(jwtSecret),
-                        "process.env.AWS_REGION": JSON.stringify(props.env?.region)
+                        "process.env.AWS_REGION": JSON.stringify(props.apiOriginRegion)
                     },
                     esbuildArgs: { "--bundle": true },
                     target: "es2020",

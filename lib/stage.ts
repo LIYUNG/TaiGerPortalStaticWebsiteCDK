@@ -9,6 +9,7 @@ interface DeploymentkProps extends StageProps {
     domain: string;
     apiDomain: string;
     crmApiDomain: string;
+    apiOriginRegion: string;
     staticAssetsBucketName: string;
     isProd: boolean;
 }
@@ -20,6 +21,7 @@ export class Deployment extends Stage {
 
         new CloudFrontStack(this, `${APPLICATION_NAME}CloudFrontStack`, {
             stageName: props.stageName,
+            apiOriginRegion: props.apiOriginRegion,
             staticAssetsBucketName: props.staticAssetsBucketName,
             apiDomain: props.apiDomain,
             crmApiDomain: props.crmApiDomain,
