@@ -8,6 +8,7 @@ interface DeploymentkProps extends StageProps {
     stageName: string;
     domain: string;
     apiDomain: string;
+    crmApiDomain: string;
     staticAssetsBucketName: string;
     isProd: boolean;
 }
@@ -21,6 +22,7 @@ export class Deployment extends Stage {
             stageName: props.stageName,
             staticAssetsBucketName: props.staticAssetsBucketName,
             apiDomain: props.apiDomain,
+            crmApiDomain: props.crmApiDomain,
             domain: props.domain,
             isProd: props?.isProd,
             env: props.env,

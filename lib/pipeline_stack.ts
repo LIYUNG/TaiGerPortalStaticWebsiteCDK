@@ -103,6 +103,7 @@ export class MyPipelineStack extends Stack {
                 // CodeBuild project
                 const domain = isProd ? `${DOMAIN_NAME}` : `${stageName}.${DOMAIN_NAME}`;
                 const apiDomain = `api.ecs.${stageName}.${DOMAIN_NAME}`;
+                const crmApiDomain = `api.crm.${stageName}.${DOMAIN_NAME}`;
 
                 // const taigerUserPoolId = StringParameter.valueForStringParameter(
                 //     this,
@@ -136,6 +137,7 @@ export class MyPipelineStack extends Stack {
                 const Stage = new Deployment(this, `BuildDeployStage-${stageName}`, {
                     stageName,
                     apiDomain,
+                    crmApiDomain,
                     domain,
                     isProd,
                     env: { region: env.region, account: env.account },

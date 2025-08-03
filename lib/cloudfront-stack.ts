@@ -6,17 +6,20 @@ import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as s3 from "aws-cdk-lib/aws-s3";
 import * as certificatemanager from "aws-cdk-lib/aws-certificatemanager";
 
-import { APPLICATION_NAME, DOMAIN_NAME } from "../configuration";
+import { APPLICATION_NAME, AWS_ACCOUNT, DOMAIN_NAME } from "../configuration";
 import { Stage } from "../constants/stages";
 import { CloudFrontTarget } from "aws-cdk-lib/aws-route53-targets";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
-import { Runtime } from "aws-cdk-lib/aws-lambda";
+import { Runtime, Tracing } from "aws-cdk-lib/aws-lambda";
 import { Duration } from "aws-cdk-lib";
+import { SsmParameters } from "../constructs/parameter-store";
+import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
 
 interface CloudFrontStackProps extends cdk.StackProps {
     stageName: string;
     domain: string;
     apiDomain: string;
+    crmApiDomain: string;
     staticAssetsBucketName: string;
     isProd: boolean;
 }
@@ -28,6 +31,15 @@ export class CloudFrontStack extends cdk.Stack {
 
         // Ensure props is defined and destructure safely
         const stageName = props.stageName;
+
+        // const keyPrefix = `/tenfoldai/backend/config/${props.stageName}`;
+        const keyPrefix = `/taiger/portal/backend/${props.stageName}`;
+        const secrets = new SsmParameters(this, `Secrets-${props.stageName}`, {
+            parameterNames: {
+                JWT_SECRET: `${keyPrefix}/jwt-secret`,
+                JWT_EXPIRE: `${keyPrefix}/jwt-expire`
+            }
+        });
 
         // S3 Bucket for static website hosting
         const websiteBucket = new s3.Bucket(this, `TaiGer-Frontend-Bucket-${stageName}`, {
@@ -54,6 +66,63 @@ export class CloudFrontStack extends cdk.Stack {
                     minify: true
                 },
                 architecture: cdk.aws_lambda.Architecture.X86_64
+            }
+        );
+        const edgeRequestFunctionRole = new cdk.aws_iam.Role(
+            this,
+            "SecureOriginInterceptorEdgeLambdaRole",
+            {
+                assumedBy: new cdk.aws_iam.CompositePrincipal(
+                    new cdk.aws_iam.ServicePrincipal("lambda.amazonaws.com"),
+                    new cdk.aws_iam.ServicePrincipal("edgelambda.amazonaws.com")
+                ),
+                managedPolicies: [
+                    cdk.aws_iam.ManagedPolicy.fromAwsManagedPolicyName(
+                        "service-role/AWSLambdaBasicExecutionRole"
+                    )
+                ],
+                //this role in case no value is provided
+                roleName: `${APPLICATION_NAME}-OriginRequest-${props.stageName}-Role`
+            }
+        );
+
+        const invokeApiPolicy = new PolicyStatement({
+            sid: "AllowInvokeApiGateway",
+            effect: Effect.ALLOW,
+            actions: ["execute-api:Invoke"],
+            resources: [`arn:aws:execute-api:${props.env?.region}:${AWS_ACCOUNT}:*/*/*/*`]
+        });
+
+        edgeRequestFunctionRole.addToPolicy(invokeApiPolicy);
+
+        const edgeOriginRequestFunction = new NodejsFunction(
+            this,
+            `${APPLICATION_NAME}-OriginRequest-${props.stageName}`,
+            {
+                functionName: `${APPLICATION_NAME}-OriginRequestV2-${props.stageName}`,
+                description: "Lambda@Edge function for origin request of Customer Portal",
+                runtime: Runtime.NODEJS_20_X,
+                entry: "src/originRequest.ts",
+                handler: "handler",
+                bundling: {
+                    define: {
+                        "process.env.JWT_SECRET": JSON.stringify(secrets.values["JWT_SECRET"]),
+                        "process.env.JWT_EXPIRE": JSON.stringify(secrets.values["JWT_EXPIRE"])
+                    },
+                    esbuildArgs: { "--bundle": true },
+                    target: "es2020",
+                    platform: "node",
+                    externalModules: [],
+                    minify: true
+                },
+                currentVersionOptions: {
+                    removalPolicy: cdk.RemovalPolicy.DESTROY
+                },
+                architecture: cdk.aws_lambda.Architecture.X86_64,
+                memorySize: 128,
+                timeout: cdk.Duration.seconds(3),
+                tracing: Tracing.ACTIVE,
+                role: edgeRequestFunctionRole
             }
         );
 
@@ -101,6 +170,8 @@ export class CloudFrontStack extends cdk.Stack {
         );
         // Construct the full URL for the API Gateway (use the appropriate URL format)
         const apiGatewayOrigin = new origins.HttpOrigin(props.apiDomain);
+
+        const crmApiGatewayOrigin = new origins.HttpOrigin(props.crmApiDomain);
 
         // no cahcing:
         const acceptEncodingCachePolicy = new cloudfront.CachePolicy(
@@ -155,6 +226,20 @@ export class CloudFrontStack extends cdk.Stack {
                         allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
                         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
                         originRequestPolicy,
+                        compress: true
+                    },
+                    "/crm/*": {
+                        origin: crmApiGatewayOrigin,
+                        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
+                        allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+                        cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+                        originRequestPolicy,
+                        edgeLambdas: [
+                            {
+                                eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
+                                functionVersion: edgeOriginRequestFunction.currentVersion
+                            }
+                        ],
                         compress: true
                     }
                 },
