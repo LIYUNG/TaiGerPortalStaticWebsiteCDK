@@ -100,6 +100,12 @@ const sigV4SignCloudFrontRequest = async (
             }
         ];
     }
+    console.log(`signedRequest: ${JSON.stringify(signedRequest)}`);
+
+    const signedQueryString = signedRequest.path?.split("?")[0];
+    console.log(`signedQueryString: ${signedQueryString}`);
+
+    request.querystring = signedQueryString!;
 
     console.log(`SigV4-signed request headers: ${JSON.stringify(request.headers)}`);
 
