@@ -44,6 +44,8 @@ const sigV4SignCloudFrontRequest = async (
     console.log(`before-signed request headers: ${JSON.stringify(request.headers)}`);
     const service = "execute-api";
     const region = process.env.AWS_REGION!;
+    const [pathOnly] = request.uri.replace(/^\/crm-api\//, "/").split("?");
+    request.uri = pathOnly;
     const canonicalURI = request.uri;
 
     // Handle query string properly
