@@ -27,7 +27,7 @@ export const STAGES = [
     },
     {
         stageName: Stage.PROD,
-        env: { region: Region.US_WEST_2, account: AWS_ACCOUNT },
+        env: { region: Region.US_EAST_1, account: AWS_ACCOUNT },
         apiOriginRegion: Region.US_WEST_2,
         staticAssetsBucketName: STATIC_ASSETS_BUCKET_PROD,
         isProd: true,

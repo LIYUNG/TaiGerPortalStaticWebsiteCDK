@@ -83,7 +83,7 @@ export class CloudFrontStack extends cdk.Stack {
             sid: "AllowInvokeApiGateway",
             effect: Effect.ALLOW,
             actions: ["execute-api:Invoke"],
-            resources: [`arn:aws:execute-api:${props.env?.region}:${AWS_ACCOUNT}:*/*/*/*`]
+            resources: [`arn:aws:execute-api:${props.apiOriginRegion}:${AWS_ACCOUNT}:*/*/*/*`]
         });
 
         edgeRequestFunctionRole.addToPolicy(invokeApiPolicy);
