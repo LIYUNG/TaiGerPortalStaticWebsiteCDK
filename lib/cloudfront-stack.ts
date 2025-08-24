@@ -205,6 +205,7 @@ export class CloudFrontStack extends cdk.Stack {
                 blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
                 encryption: s3.BucketEncryption.KMS_MANAGED,
                 enforceSSL: true,
+                objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_PREFERRED,
                 lifecycleRules: [
                     {
                         expiration: cdk.Duration.days(90) // auto-expire logs after 90 days
@@ -212,6 +213,22 @@ export class CloudFrontStack extends cdk.Stack {
                 ]
             }
         );
+
+        // Grant CloudFront permission to write logs
+        loggingBucket.addToResourcePolicy(
+            new cdk.aws_iam.PolicyStatement({
+                effect: cdk.aws_iam.Effect.ALLOW,
+                principals: [new cdk.aws_iam.ServicePrincipal("cloudfront.amazonaws.com")],
+                actions: ["s3:PutObject"],
+                resources: [loggingBucket.arnForObjects("cloudfront-logs/*")],
+                conditions: {
+                    StringEquals: {
+                        "AWS:SourceAccount": AWS_ACCOUNT // tighten to your account
+                    }
+                }
+            })
+        );
+
         // Create the CloudFront distribution
         this.distribution = new cloudfront.Distribution(
             this,
@@ -274,6 +291,7 @@ export class CloudFrontStack extends cdk.Stack {
                     }
                 },
                 logBucket: loggingBucket,
+                logFilePrefix: "cloudfront-logs/", // optional prefix
                 domainNames: [props.domain],
                 certificate: certificate,
                 priceClass: cloudfront.PriceClass.PRICE_CLASS_ALL
