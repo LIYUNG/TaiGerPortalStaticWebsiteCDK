@@ -194,6 +194,24 @@ export class CloudFrontStack extends cdk.Stack {
                 }
             }
         );
+
+        // Create an S3 bucket for CloudFront logs
+        const loggingBucket = new s3.Bucket(
+            this,
+            `${APPLICATION_NAME}-CloudFrontLoggingBucket-${props.stageName}`,
+            {
+                bucketName:
+                    `${APPLICATION_NAME}-CloudFrontLoggingBucket-${props.stageName}`.toLowerCase(),
+                blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+                encryption: s3.BucketEncryption.KMS_MANAGED,
+                enforceSSL: true,
+                lifecycleRules: [
+                    {
+                        expiration: cdk.Duration.days(90) // auto-expire logs after 90 days
+                    }
+                ]
+            }
+        );
         // Create the CloudFront distribution
         this.distribution = new cloudfront.Distribution(
             this,
@@ -255,6 +273,7 @@ export class CloudFrontStack extends cdk.Stack {
                         compress: true
                     }
                 },
+                logBucket: loggingBucket,
                 domainNames: [props.domain],
                 certificate: certificate,
                 priceClass: cloudfront.PriceClass.PRICE_CLASS_ALL
