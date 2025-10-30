@@ -1,4 +1,4 @@
-import { Stack, StackProps, SecretValue } from "aws-cdk-lib";
+import { Stack, StackProps, SecretValue, RemovalPolicy, Duration } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import {
     CodeBuildStep,
@@ -26,7 +26,7 @@ import {
     PIPELINE_NAME
 } from "../configuration";
 import { Deployment } from "./stage";
-// import { StringParameter } from "aws-cdk-lib/aws-ssm";
+import { BlockPublicAccess, Bucket, BucketEncryption } from "aws-cdk-lib/aws-s3";
 
 export class MyPipelineStack extends Stack {
     constructor(scope: Construct, id: string, props?: StackProps) {
@@ -74,6 +74,20 @@ export class MyPipelineStack extends Stack {
         const pipeline = new CodePipeline(this, `${PIPELINE_NAME}`, {
             pipelineName: `${PIPELINE_NAME}`,
             pipelineType: PipelineType.V2,
+            artifactBucket: new Bucket(this, `${PIPELINE_NAME}-ArtifactBucket`, {
+                bucketName: `${PIPELINE_NAME}-artifact-bucket`.toLowerCase(),
+                removalPolicy: RemovalPolicy.DESTROY,
+                autoDeleteObjects: true,
+                versioned: false,
+                encryption: BucketEncryption.S3_MANAGED,
+                blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
+                enforceSSL: true,
+                lifecycleRules: [
+                    {
+                        expiration: Duration.days(30)
+                    }
+                ]
+            }),
             synth: new ShellStep("Synth", {
                 input: source,
                 additionalInputs: {
