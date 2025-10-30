@@ -234,6 +234,7 @@ export class CloudFrontStack extends cdk.Stack {
             this,
             `TaiGerPortalStaticWebsiteDistribution-${stageName}`,
             {
+                defaultRootObject: "index.html", // CloudFront.1 compliance - specify default root object
                 defaultBehavior: {
                     origin: s3Origin,
                     viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
