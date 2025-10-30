@@ -236,7 +236,7 @@ export class CloudFrontStack extends cdk.Stack {
             {
                 defaultBehavior: {
                     origin: s3Origin,
-                    viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
+                    viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                     allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
                     cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
                     edgeLambdas: [
@@ -250,7 +250,7 @@ export class CloudFrontStack extends cdk.Stack {
                 additionalBehaviors: {
                     "/api/*": {
                         origin: apiGatewayOrigin,
-                        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
+                        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
                         cachePolicy: acceptEncodingCachePolicy,
                         originRequestPolicy,
@@ -258,7 +258,7 @@ export class CloudFrontStack extends cdk.Stack {
                     },
                     "/auth/*": {
                         origin: apiGatewayOrigin,
-                        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
+                        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
                         cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
                         originRequestPolicy,
@@ -266,7 +266,7 @@ export class CloudFrontStack extends cdk.Stack {
                     },
                     "/images/*": {
                         origin: apiGatewayOrigin,
-                        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
+                        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                         allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
                         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
                         originRequestPolicy,
@@ -274,7 +274,7 @@ export class CloudFrontStack extends cdk.Stack {
                     },
                     "/crm-api/*": {
                         origin: crmApiGatewayOrigin,
-                        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
+                        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
                         allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
                         cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
                         originRequestPolicy,
