@@ -4,9 +4,7 @@ import {
     CodeBuildStep,
     CodePipeline,
     CodePipelineSource,
-    ManualApprovalStep,
-    // ManualApprovalStep,
-    ShellStep
+    ManualApprovalStep
 } from "aws-cdk-lib/pipelines";
 import { PipelineType } from "aws-cdk-lib/aws-codepipeline";
 import * as codepipeline_actions from "aws-cdk-lib/aws-codepipeline-actions";
@@ -65,6 +63,15 @@ export class MyPipelineStack extends Stack {
         const keyPrefixProd = `/taiger/portal/backend/prod`;
         const fetchJWTSecretStep = new CodeBuildStep(`FetchJWTSecret`, {
             primaryOutputDirectory: ".",
+            logging: {
+                cloudWatch: {
+                    logGroup: new LogGroup(this, `${GITHUB_REPO}FetchJWTSecret-LogGroup`, {
+                        logGroupName: `/aws/codepipeline/fetch-jwt-secret/${GITHUB_REPO}`,
+                        retention: RetentionDays.THREE_MONTHS,
+                        removalPolicy: RemovalPolicy.DESTROY
+                    })
+                }
+            },
             commands: [
                 `aws ssm get-parameter --name "${keyPreBetafix}/jwt-secret" --with-decryption --query "Parameter.Value" --output text > jwtSecret_beta.txt`,
                 `aws ssm get-parameter --name "${keyPrefixProd}/jwt-secret" --with-decryption --query "Parameter.Value" --output text > jwtSecret_prod.txt`
@@ -89,10 +96,19 @@ export class MyPipelineStack extends Stack {
                     }
                 ]
             }),
-            synth: new ShellStep("Synth", {
+            synth: new CodeBuildStep("Synth", {
                 input: source,
                 additionalInputs: {
                     "../dist": fetchJWTSecretStep
+                },
+                logging: {
+                    cloudWatch: {
+                        logGroup: new LogGroup(this, `${GITHUB_REPO}Synth-LogGroup`, {
+                            logGroupName: `/aws/codepipeline/synth/${GITHUB_REPO}`,
+                            retention: RetentionDays.THREE_MONTHS,
+                            removalPolicy: RemovalPolicy.DESTROY
+                        })
+                    }
                 },
                 commands: [
                     "npm ci",
@@ -159,6 +175,19 @@ export class MyPipelineStack extends Stack {
                     input: sourceStep,
                     installCommands: ["npm install"],
                     commands: ["npm run test:ci", "npm run build"],
+                    logging: {
+                        cloudWatch: {
+                            logGroup: new LogGroup(
+                                this,
+                                `${GITHUB_REPO}Build-FrontEnd-${stageName}-LogGroup`,
+                                {
+                                    logGroupName: `/aws/codepipeline/build-front-end/${GITHUB_REPO}-${stageName}`,
+                                    retention: RetentionDays.THREE_MONTHS,
+                                    removalPolicy: RemovalPolicy.DESTROY
+                                }
+                            )
+                        }
+                    },
                     env: {
                         REACT_APP_STAGE: stageName,
                         REACT_APP_PROD_URL: `https://${domain}`,
@@ -186,18 +215,44 @@ export class MyPipelineStack extends Stack {
                     staticAssetsBucketName
                 });
 
-                const deployStep = new ShellStep(`Deploy-FrontEnd-${stageName}`, {
+                const deployStep = new CodeBuildStep(`Deploy-FrontEnd-${stageName}`, {
                     input: buildStep,
-                    commands: ["ls", `aws s3 sync . s3://${staticAssetsBucketName} --delete`]
+                    commands: ["ls", `aws s3 sync . s3://${staticAssetsBucketName} --delete`],
+                    logging: {
+                        cloudWatch: {
+                            logGroup: new LogGroup(
+                                this,
+                                `${GITHUB_REPO}Deploy-FrontEnd-${stageName}-LogGroup`,
+                                {
+                                    logGroupName: `/aws/codepipeline/deploy-front-end/${GITHUB_REPO}-${stageName}`,
+                                    retention: RetentionDays.THREE_MONTHS,
+                                    removalPolicy: RemovalPolicy.DESTROY
+                                }
+                            )
+                        }
+                    }
                 });
 
-                const invalidateCacheStep = new ShellStep(`InvalidateCache-${stageName}`, {
+                const invalidateCacheStep = new CodeBuildStep(`InvalidateCache-${stageName}`, {
                     commands: [
                         // Fetch CloudFront Distribution ID using AWS CLI
                         `CLOUDFRONT_ID=$(aws cloudformation describe-stacks --stack-name ${stageName}-${APPLICATION_NAME}CloudFrontStack --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionId'].OutputValue" --output text)`,
                         // Use the fetched CloudFront ID to create invalidation
                         `aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_ID --paths "/*"`
-                    ]
+                    ],
+                    logging: {
+                        cloudWatch: {
+                            logGroup: new LogGroup(
+                                this,
+                                `${GITHUB_REPO}InvalidateCache-${stageName}-LogGroup`,
+                                {
+                                    logGroupName: `/aws/codepipeline/invalidate-cache/${GITHUB_REPO}-${stageName}`,
+                                    retention: RetentionDays.THREE_MONTHS,
+                                    removalPolicy: RemovalPolicy.DESTROY
+                                }
+                            )
+                        }
+                    }
                 });
 
                 const approvalStep = new ManualApprovalStep("ApproveIfStable", {
