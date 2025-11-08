@@ -27,6 +27,7 @@ import {
 } from "../configuration";
 import { Deployment } from "./stage";
 import { BlockPublicAccess, Bucket, BucketEncryption } from "aws-cdk-lib/aws-s3";
+import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
 
 export class MyPipelineStack extends Stack {
     constructor(scope: Construct, id: string, props?: StackProps) {
@@ -101,6 +102,15 @@ export class MyPipelineStack extends Stack {
             }),
             role: adminRole,
             codeBuildDefaults: {
+                logging: {
+                    cloudWatch: {
+                        logGroup: new LogGroup(this, `${PIPELINE_NAME}-LogGroup`, {
+                            logGroupName: `/aws/codepipeline/${PIPELINE_NAME}`,
+                            retention: RetentionDays.THREE_MONTHS,
+                            removalPolicy: RemovalPolicy.DESTROY
+                        })
+                    }
+                },
                 rolePolicy: [
                     new iam.PolicyStatement({
                         actions: ["*"],
