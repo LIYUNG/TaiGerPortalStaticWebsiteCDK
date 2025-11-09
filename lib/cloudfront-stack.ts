@@ -11,8 +11,9 @@ import { Stage } from "../constants/stages";
 import { CloudFrontTarget } from "aws-cdk-lib/aws-route53-targets";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { Runtime, Tracing } from "aws-cdk-lib/aws-lambda";
-import { Duration } from "aws-cdk-lib";
+import { Duration, RemovalPolicy } from "aws-cdk-lib";
 import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
+import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
 
 interface CloudFrontStackProps extends cdk.StackProps {
     stageName: string;
@@ -31,7 +32,7 @@ export class CloudFrontStack extends cdk.Stack {
 
         // Ensure props is defined and destructure safely
         const stageName = props.stageName;
-
+        const awsRegion = props.region;
         const jwtSecret = this.node.tryGetContext(`jwtSecret_${stageName}`) || "123";
 
         // S3 Bucket for static website hosting
@@ -58,6 +59,15 @@ export class CloudFrontStack extends cdk.Stack {
                     platform: "node",
                     minify: true
                 },
+                logGroup: new LogGroup(
+                    this,
+                    `${APPLICATION_NAME}-OriginBucketRequest-${stageName}-LogGroup`,
+                    {
+                        logGroupName: `/aws/lambda/${APPLICATION_NAME}-OriginBucketRequest-${stageName}-${awsRegion}`,
+                        retention: RetentionDays.SIX_MONTHS,
+                        removalPolicy: RemovalPolicy.DESTROY
+                    }
+                ),
                 architecture: cdk.aws_lambda.Architecture.X86_64
             }
         );
