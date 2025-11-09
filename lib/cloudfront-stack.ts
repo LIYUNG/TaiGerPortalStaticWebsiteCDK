@@ -121,6 +121,15 @@ export class CloudFrontStack extends cdk.Stack {
                 currentVersionOptions: {
                     removalPolicy: cdk.RemovalPolicy.DESTROY
                 },
+                logGroup: new LogGroup(
+                    this,
+                    `${APPLICATION_NAME}-OriginRequest-${stageName}-LogGroup`,
+                    {
+                        logGroupName: `/aws/lambda/${APPLICATION_NAME}-OriginRequest-${stageName}-${awsRegion}`,
+                        retention: RetentionDays.SIX_MONTHS,
+                        removalPolicy: RemovalPolicy.DESTROY
+                    }
+                ),
                 architecture: cdk.aws_lambda.Architecture.X86_64,
                 memorySize: 128,
                 timeout: cdk.Duration.seconds(3),
