@@ -32,7 +32,7 @@ export class CloudFrontStack extends cdk.Stack {
 
         // Ensure props is defined and destructure safely
         const stageName = props.stageName;
-        const awsRegion = props.region;
+        const awsRegion = props.env?.region;
         const jwtSecret = this.node.tryGetContext(`jwtSecret_${stageName}`) || "123";
 
         // S3 Bucket for static website hosting
