@@ -87,7 +87,6 @@ export class MyPipelineStack extends Stack {
                 removalPolicy: RemovalPolicy.DESTROY,
                 autoDeleteObjects: true,
                 versioned: false,
-                enforceSsl: true,
                 encryption: BucketEncryption.S3_MANAGED,
                 blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
                 enforceSSL: true,
