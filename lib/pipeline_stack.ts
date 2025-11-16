@@ -9,6 +9,7 @@ import {
 import { PipelineType } from "aws-cdk-lib/aws-codepipeline";
 import * as codepipeline_actions from "aws-cdk-lib/aws-codepipeline-actions";
 import * as iam from "aws-cdk-lib/aws-iam";
+import { LinuxBuildImage } from "aws-cdk-lib/aws-codebuild";
 
 import { STAGES } from "../constants";
 import {
@@ -72,6 +73,9 @@ export class MyPipelineStack extends Stack {
         const unitTestStep = new CodeBuildStep(`UnitTest`, {
             input: frontendSource,
             primaryOutputDirectory: ".",
+            buildEnvironment: {
+                buildImage: LinuxBuildImage.STANDARD_7_0
+            },
             logging: {
                 cloudWatch: {
                     logGroup: new LogGroup(this, `${GITHUB_REPO}UnitTest-LogGroup`, {
@@ -180,7 +184,10 @@ export class MyPipelineStack extends Stack {
 
                 const buildStep = new CodeBuildStep(`Build-FrontEnd-${stageName}`, {
                     input: unitTestStep,
-                    commands: ["npm run build"],
+                    commands: ["npm ci", "npm run build"],
+                    buildEnvironment: {
+                        buildImage: LinuxBuildImage.STANDARD_7_0
+                    },
                     logging: {
                         cloudWatch: {
                             logGroup: new LogGroup(
