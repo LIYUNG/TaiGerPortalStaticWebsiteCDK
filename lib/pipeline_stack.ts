@@ -234,7 +234,8 @@ export class MyPipelineStack extends Stack {
                                 }
                             )
                         }
-                    }
+                    },
+                    primaryOutputDirectory: "."
                 });
 
                 const invalidateCacheStep = new CodeBuildStep(`InvalidateCache-${stageName}`, {
