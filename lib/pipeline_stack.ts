@@ -41,6 +41,16 @@ export class MyPipelineStack extends Stack {
             }
         );
 
+        // Add source steps for both repositories
+        const frontendSource = CodePipelineSource.gitHub(
+            `${GITHUB_OWNER}/${GITHUB_REPO}`,
+            GITHUB_PACKAGE_BRANCH,
+            {
+                authentication: SecretValue.secretsManager(GITHUB_TOKEN),
+                trigger: codepipeline_actions.GitHubTrigger.WEBHOOK
+            }
+        );
+
         const adminRole = new iam.Role(this, "PipelineAdminRole", {
             assumedBy: new iam.ServicePrincipal("codepipeline.amazonaws.com"),
             managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName("AdministratorAccess")]
@@ -59,9 +69,25 @@ export class MyPipelineStack extends Stack {
 
         adminRole.addToPolicy(s3AccessPolicy);
 
+        const unitTestStep = new CodeBuildStep(`UnitTest`, {
+            input: frontendSource,
+            primaryOutputDirectory: ".",
+            logging: {
+                cloudWatch: {
+                    logGroup: new LogGroup(this, `${GITHUB_REPO}UnitTest-LogGroup`, {
+                        logGroupName: `/aws/codepipeline/unit-test/${GITHUB_REPO}`,
+                        retention: RetentionDays.THREE_MONTHS,
+                        removalPolicy: RemovalPolicy.DESTROY
+                    })
+                }
+            },
+            commands: [`npm ci`, `npm run test:ci`]
+        });
+
         const keyPreBetafix = `/taiger/portal/backend/beta`;
         const keyPrefixProd = `/taiger/portal/backend/prod`;
         const fetchJWTSecretStep = new CodeBuildStep(`FetchJWTSecret`, {
+            input: unitTestStep,
             primaryOutputDirectory: ".",
             logging: {
                 cloudWatch: {
@@ -136,16 +162,6 @@ export class MyPipelineStack extends Stack {
             }
         });
 
-        // Add source steps for both repositories
-        const sourceStep = CodePipelineSource.gitHub(
-            `${GITHUB_OWNER}/${GITHUB_REPO}`,
-            GITHUB_PACKAGE_BRANCH,
-            {
-                authentication: SecretValue.secretsManager(GITHUB_TOKEN),
-                trigger: codepipeline_actions.GitHubTrigger.WEBHOOK
-            }
-        );
-
         STAGES.forEach(
             ({
                 stageName,
@@ -162,19 +178,9 @@ export class MyPipelineStack extends Stack {
                 const apiDomain = `api.ecs.${stageName}.${DOMAIN_NAME}`;
                 const crmApiDomain = `api.crm.${stageName}.${DOMAIN_NAME}`;
 
-                // const taigerUserPoolId = StringParameter.valueForStringParameter(
-                //     this,
-                //     "/auth/taigerUserPoolId"
-                // );
-                // const userPoolClientId = StringParameter.valueForStringParameter(
-                //     this,
-                //     "/auth/taigerUserPoolClientId"
-                // );
-
                 const buildStep = new CodeBuildStep(`Build-FrontEnd-${stageName}`, {
-                    input: sourceStep,
-                    installCommands: ["npm install"],
-                    commands: ["npm run test:ci", "npm run build"],
+                    input: unitTestStep,
+                    commands: ["npm run build"],
                     logging: {
                         cloudWatch: {
                             logGroup: new LogGroup(
@@ -195,8 +201,6 @@ export class MyPipelineStack extends Stack {
                         REACT_APP_GOOGLE_CLIENT_ID: REACT_APP_GOOGLE_CLIENT_ID,
                         REACT_APP_GOOGLE_REDIRECT_URL: REACT_APP_GOOGLE_REDIRECT_URL,
                         GENERATE_SOURCEMAP: "false",
-                        // REACT_APP_USER_POOL_ID: taigerUserPoolId, // Import UserPoolId from CF Output
-                        // REACT_APP_USER_POOL_CLIENT_ID: userPoolClientId, // Import UserPoolClientId
                         CI: "true"
                     },
                     primaryOutputDirectory: "build",
@@ -234,6 +238,7 @@ export class MyPipelineStack extends Stack {
                 });
 
                 const invalidateCacheStep = new CodeBuildStep(`InvalidateCache-${stageName}`, {
+                    input: deployStep,
                     commands: [
                         // Fetch CloudFront Distribution ID using AWS CLI
                         `CLOUDFRONT_ID=$(aws cloudformation describe-stacks --stack-name ${stageName}-${APPLICATION_NAME}CloudFrontStack --query "Stacks[0].Outputs[?OutputKey=='CloudFrontDistributionId'].OutputValue" --output text)`,
