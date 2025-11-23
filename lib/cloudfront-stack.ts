@@ -49,7 +49,7 @@ export class CloudFrontStack extends cdk.Stack {
             `${APPLICATION_NAME}-OriginBucketRequest-${stageName}`,
             {
                 functionName: `${APPLICATION_NAME}-OriginBucketRequest-${stageName}`,
-                runtime: Runtime.NODEJS_20_X,
+                runtime: Runtime.NODEJS_22_X,
                 handler: "handler",
                 entry: "src/bucketRequest.ts",
                 description: "Rewrites non-file paths to /index.html",
@@ -104,7 +104,7 @@ export class CloudFrontStack extends cdk.Stack {
             {
                 functionName: `${APPLICATION_NAME}-OriginRequest-${stageName}`,
                 description: "Lambda@Edge function for origin request of TaiGer Portal",
-                runtime: Runtime.NODEJS_20_X,
+                runtime: Runtime.NODEJS_22_X,
                 entry: "src/originRequest.ts",
                 handler: "handler",
                 bundling: {
