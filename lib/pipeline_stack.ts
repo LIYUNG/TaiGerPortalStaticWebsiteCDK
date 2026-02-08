@@ -174,8 +174,8 @@ export class MyPipelineStack extends Stack {
                 isProd,
                 apiOriginRegion,
                 env,
-                REACT_APP_GOOGLE_CLIENT_ID,
-                REACT_APP_GOOGLE_REDIRECT_URL
+                VITE_GOOGLE_OAUTH_CLIENT_ID,
+                VITE_GOOGLE_OAUTH_REDIRECT_URL
             }) => {
                 // CodeBuild project
                 const domain = isProd ? `${DOMAIN_NAME}` : `${stageName}.${DOMAIN_NAME}`;
@@ -202,15 +202,16 @@ export class MyPipelineStack extends Stack {
                         }
                     },
                     env: {
-                        REACT_APP_STAGE: stageName,
-                        REACT_APP_PROD_URL: `https://${domain}`,
-                        REACT_APP_TENANT_ID: tenantId,
-                        REACT_APP_GOOGLE_CLIENT_ID: REACT_APP_GOOGLE_CLIENT_ID,
-                        REACT_APP_GOOGLE_REDIRECT_URL: REACT_APP_GOOGLE_REDIRECT_URL,
+                        NODE_OPTIONS: "--max-old-space-size=4096",
+                        VITE_DEV_URL: stageName,
+                        VITE_PROD_URL: `https://${domain}`,
+                        VITE_TENANT_ID: tenantId,
+                        VITE_GOOGLE_OAUTH_CLIENT_ID: VITE_GOOGLE_OAUTH_CLIENT_ID,
+                        VITE_GOOGLE_OAUTH_REDIRECT_URL: VITE_GOOGLE_OAUTH_REDIRECT_URL,
                         GENERATE_SOURCEMAP: "false",
                         CI: "true"
                     },
-                    primaryOutputDirectory: "build",
+                    primaryOutputDirectory: "dist",
                     projectName: `BuildProject-${stageName}`
                 });
 

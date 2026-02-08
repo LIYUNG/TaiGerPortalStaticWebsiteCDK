@@ -20,9 +20,9 @@ export const STAGES = [
         staticAssetsBucketName: STATIC_ASSETS_BUCKET_DEV,
         isProd: false,
         tenantId: TENANT_ID_DEV,
-        REACT_APP_GOOGLE_CLIENT_ID:
+        VITE_GOOGLE_OAUTH_CLIENT_ID:
             "867322734152-0agpur3trvqr4s5rrpbp2j6hallrd2d1.apps.googleusercontent.com",
-        REACT_APP_GOOGLE_REDIRECT_URL:
+        VITE_GOOGLE_OAUTH_REDIRECT_URL:
             "https://beta.taigerconsultancy-portal.com/account/google/verify"
     },
     {
@@ -32,8 +32,8 @@ export const STAGES = [
         staticAssetsBucketName: STATIC_ASSETS_BUCKET_PROD,
         isProd: true,
         tenantId: TENANT_ID_PRDO,
-        REACT_APP_GOOGLE_CLIENT_ID:
+        VITE_GOOGLE_OAUTH_CLIENT_ID:
             "867322734152-1u991odgfgvskcgpjfo1r1vdfcon119p.apps.googleusercontent.com",
-        REACT_APP_GOOGLE_REDIRECT_URL: "https://taigerconsultancy-portal.com/account/google/verify"
+        VITE_GOOGLE_OAUTH_REDIRECT_URL: "https://taigerconsultancy-portal.com/account/google/verify"
     }
 ];
