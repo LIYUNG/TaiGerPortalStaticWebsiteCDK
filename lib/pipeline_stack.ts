@@ -229,7 +229,11 @@ export class MyPipelineStack extends Stack {
 
                 const deployStep = new CodeBuildStep(`Deploy-FrontEnd-${stageName}`, {
                     input: buildStep,
-                    commands: ["ls", `aws s3 sync . s3://${staticAssetsBucketName} --delete`],
+                    commands: [
+                        "ls",
+                        `aws s3 sync . s3://${staticAssetsBucketName} --delete`,
+                        `aws s3 cp s3://${staticAssetsBucketName}/index.html s3://${staticAssetsBucketName}/index.html --metadata-directive REPLACE --cache-control "no-cache, no-store, must-revalidate" --content-type "text/html"`
+                    ],
                     logging: {
                         cloudWatch: {
                             logGroup: new LogGroup(
